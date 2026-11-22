@@ -168,7 +168,7 @@ function saveManual(provider: string): void {
   display: flex;
   align-items: flex-start;
   gap: var(--s-3);
-  min-height: 48px;
+  min-height: var(--list-row-h);
   padding: var(--s-2) var(--s-4);
 }
 
