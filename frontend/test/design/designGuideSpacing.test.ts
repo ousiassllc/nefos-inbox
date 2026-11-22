@@ -19,6 +19,10 @@ describe('間隔レシピ（S2・#212）', () => {
       'padding: var(--pad-card-sm)',
     )
   })
+
+  test('サイドバーのエージェントの入口の左右 padding は --menu-pad-x（設定の行と左端をそろえる・#437）', () => {
+    expect(rule('shell/SidebarAgent.vue', '.agent {')).toContain('padding: 0 var(--menu-pad-x)')
+  })
 })
 
 describe('線（S4・#212）', () => {
@@ -26,6 +30,10 @@ describe('線（S4・#212）', () => {
     expect(rule('compose/RichTextEditor.vue', '[data-hitomado-quote])')).toContain(
       'border-left: 1px solid var(--mute)',
     )
+  })
+
+  test('本文エディタの枠（.rte）は overflow: hidden で、ツールバーの地を角丸で切る（#437）', () => {
+    expect(rule('compose/RichTextEditor.vue', '.rte {')).toContain('overflow: hidden')
   })
 })
 

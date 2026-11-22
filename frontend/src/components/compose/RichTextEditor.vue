@@ -153,6 +153,7 @@ onBeforeUnmount(() => editor.value?.destroy())
   flex-direction: column;
   border: 1px solid var(--border);
   border-radius: var(--r-md);
+  overflow: hidden;
   background: var(--surface);
   color: var(--ink);
 }
