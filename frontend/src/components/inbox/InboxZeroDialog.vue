@@ -175,7 +175,6 @@ function onReviewOpen(open: boolean): void {
 
 .from {
   overflow: hidden;
-  font-weight: 600;
   font-size: var(--font-size-sm);
   line-height: var(--line-height-sm);
   text-overflow: ellipsis;
@@ -184,6 +183,7 @@ function onReviewOpen(open: boolean): void {
 
 .subject {
   overflow: hidden;
+  color: var(--mute-on-soft);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-sm);
   text-overflow: ellipsis;
