@@ -233,11 +233,13 @@ function focusDialog(e: Event): void {
   margin-top: var(--s-3);
 }
 
-/* 本文は縦にスクロールする（overflow: auto）ので、子のフォーカスリング（外側 offset 2 + 2px = 4px）が縁で切れる。
-   --s-1 の余白を四辺に足し、同じ分だけ margin で打ち消して見た目の位置は変えない。 */
+/* 本文は縦にスクロールする（overflow: auto）ので、子のフォーカスリングが縁で切れる。リングは外側 offset 2 + 太さ 3px（スイッチ・チェックボックス）= 5px まで出る。
+   --s-1 + 1px の余白を四辺に足し、同じ分だけ margin で打ち消して見た目の位置は変えない。 */
 .dlg-body {
-  margin: calc(var(--s-3) - var(--s-1)) calc(var(--s-1) * -1) calc(var(--s-1) * -1);
-  padding: var(--s-1);
+  --ring-room: calc(var(--s-1) + 1px);
+
+  margin: calc(var(--s-3) - var(--ring-room)) calc(var(--ring-room) * -1) calc(var(--ring-room) * -1);
+  padding: var(--ring-room);
   overflow: auto;
   min-height: 0;
 }
