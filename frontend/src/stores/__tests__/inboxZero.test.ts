@@ -77,10 +77,11 @@ describe('Inbox Zero: 押せるか（#314・#377）', () => {
     expect(none.zero.blockedReason).toContain('Inbox Zero で使う AI が選ばれていません')
   })
 
-  test('押せないときにボタンを押すと、理由をトーストで出し、AI へは何も送らない', async () => {
+  test('押せないときにボタンを押すと、複数文の理由はトーストでなくインラインアラートで出し、AI へは何も送らない', async () => {
     const { zero, ui } = await setup({ keyed: false })
     await zero.start()
-    expect(ui.toast?.message).toContain('Inbox Zero で使う AI が選ばれていません')
+    expect(ui.alerts.map((a) => a.message)).toContain(zero.blockedReason as string)
+    expect(ui.toast).toBeUndefined()
     expect(callsOf('FindInboxZeroCandidates')).toHaveLength(0)
     expect(zero.phase).toBe('idle')
   })

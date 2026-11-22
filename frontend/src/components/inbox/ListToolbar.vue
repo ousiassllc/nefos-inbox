@@ -137,7 +137,8 @@ function onLabelSelect(key: string): void {
   display: flex;
   align-items: center;
   gap: var(--s-2);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
   white-space: nowrap;
 }
 

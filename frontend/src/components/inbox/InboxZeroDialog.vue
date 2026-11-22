@@ -45,9 +45,10 @@ function onReviewOpen(open: boolean): void {
     :open="consentOpen"
     size="sm"
     :title="t.consentTitle(dest?.providerLabel ?? '')"
-    :description="t.consentDescription(dest?.providerLabel ?? '', dest?.url ?? '')"
+    :body-label="t.consentTitle(dest?.providerLabel ?? '')"
     @update:open="onConsentOpen"
   >
+    <p class="body" data-testid="inbox-zero-consent-body">{{ t.consentDescription(dest?.providerLabel ?? '', dest?.url ?? '') }}</p>
     <template #footer>
       <BaseButton data-testid="inbox-zero-consent-cancel" @click="zero.cancel()">{{ common.cancel }}</BaseButton>
       <BaseButton variant="primary" data-testid="inbox-zero-consent-agree" @click="zero.agree()">{{ t.consentAgree }}</BaseButton>
@@ -71,10 +72,10 @@ function onReviewOpen(open: boolean): void {
     size="md"
     :eyebrow="t.dialogEyebrow"
     :title="t.dialogTitle"
-    :description="t.dialogDescription"
     stack-footer
     @update:open="onReviewOpen"
   >
+    <p class="body">{{ t.dialogDescription }}</p>
     <p class="count" data-testid="inbox-zero-count" aria-live="polite">
       {{ t.selected(count, zero.candidates.length) }}<template v-if="zero.skipped > 0">　{{ t.skipped(zero.skipped) }}</template>
     </p>
@@ -103,6 +104,16 @@ function onReviewOpen(open: boolean): void {
 </template>
 
 <style scoped>
+.body {
+  margin: 0 0 var(--s-3);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+}
+
+.body:last-child {
+  margin-bottom: 0;
+}
+
 .checking {
   display: flex;
   align-items: center;
@@ -141,18 +152,45 @@ function onReviewOpen(open: boolean): void {
   background: var(--accent-soft);
 }
 
+/* ガイドのチェックボックス（O8）。ブラウザ標準にせず、ChatGPTAccountRow の .radio と同じ作りにする。
+   外枠 --mute・18px・--r-sm・選択時は --accent 地に --bone のチェック・フォーカスは --accent の outline（3px・offset 2px）・無効は opacity .4。 */
 .box {
+  appearance: none;
   flex: none;
-  width: var(--icon-sm);
-  height: var(--icon-sm);
-  margin: var(--s-1) 0 0;
-  accent-color: var(--accent);
+  display: grid;
+  place-content: center;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  border: 1px solid var(--mute);
+  border-radius: var(--r-sm);
+  background: var(--surface);
   cursor: pointer;
 }
 
+.box:checked {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.box:checked::after {
+  content: '';
+  width: 5px;
+  height: 9px;
+  margin-bottom: 2px;
+  border: solid var(--bone);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
 .box:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 3px solid var(--accent);
   outline-offset: 2px;
+}
+
+.box:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
 .text {
@@ -164,7 +202,6 @@ function onReviewOpen(open: boolean): void {
 
 .from {
   overflow: hidden;
-  font-weight: 600;
   font-size: var(--font-size-sm);
   line-height: var(--line-height-sm);
   text-overflow: ellipsis;
@@ -173,6 +210,7 @@ function onReviewOpen(open: boolean): void {
 
 .subject {
   overflow: hidden;
+  color: var(--mute-on-soft);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-sm);
   text-overflow: ellipsis;

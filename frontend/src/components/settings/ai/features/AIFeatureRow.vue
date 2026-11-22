@@ -178,7 +178,6 @@ function saveManual(provider: string): void {
   align-items: center;
   width: 148px;
   min-height: var(--control-h);
-  font-weight: 500;
   font-size: var(--font-size-sm);
   line-height: var(--line-height-sm);
 }
@@ -234,9 +233,10 @@ function saveManual(provider: string): void {
   min-height: 0;
   padding: 0;
   border-color: transparent;
-  font-weight: 500;
+  font-weight: 400;
   white-space: nowrap;
   text-decoration: underline;
+  text-decoration-color: var(--mute);
   text-underline-offset: 2px;
 }
 

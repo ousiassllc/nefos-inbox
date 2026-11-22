@@ -272,6 +272,27 @@ describe('ChatGPT アカウント行のラジオはガイドの見た目（O8・
   })
 })
 
+describe('Inbox Zero の確認一覧のチェックボックスはガイドの見た目（O8・#410）', () => {
+  const style = parse(
+    readFileSync(
+      new URL('../../src/components/inbox/InboxZeroDialog.vue', import.meta.url),
+      'utf8',
+    ),
+  ).descriptor.styles[0].content
+
+  test('ブラウザ標準（accent-color）に頼らず、appearance:none・18px・--r-sm・選択時は --accent 地に --bone のチェック・フォーカスは --accent の 3px outline・無効は opacity .4', () => {
+    expect(style).not.toContain('accent-color')
+    expect(style).toContain('appearance: none')
+    expect(style).toContain('width: 18px')
+    expect(style).toContain('height: 18px')
+    expect(style).toContain('border-radius: var(--r-sm)')
+    expect(style).toMatch(/\.box:checked\s*\{[^}]*background: var\(--accent\)/)
+    expect(style).toMatch(/\.box:checked::after\s*\{[^}]*var\(--bone\)/)
+    expect(style).toMatch(/\.box:focus-visible\s*\{[^}]*outline: 3px solid var\(--accent\)/)
+    expect(style).toMatch(/\.box:disabled\s*\{[^}]*opacity: 0\.4/)
+  })
+})
+
 describe('処理中のアイコンボタンは薄めない（O12・#234）', () => {
   test('.icon-btn:disabled の opacity は aria-busy のボタンを除く（BaseButton の loading と同じ）', () => {
     const style = parse(
