@@ -38,3 +38,21 @@ describe('--mute の文字色コントラスト（WCAG AA 4.5:1・C6）', () => 
     }
   }
 })
+
+// ガイド I2・§6: --icon-xl（32）は空状態のマスコットだけ。AgentPanel は size の直書きでなく、トークンで指定する。
+describe('--icon-xl（I2・#426）', () => {
+  test('tokens.css に 32px で定義する', () => {
+    expect(css).toMatch(/--icon-xl: 32px;/)
+  })
+
+  test('AgentPanel の空状態のマスコットは --icon-xl で指定し、size の直書きをしない', () => {
+    const panel = readFileSync(
+      new URL('../../src/components/shell/AgentPanel.vue', import.meta.url),
+      'utf8',
+    )
+    expect(panel).not.toContain(':size="32"')
+    expect(panel).toMatch(
+      /\.empty-mascot \{\s*width: var\(--icon-xl\);\s*height: var\(--icon-xl\);\s*\}/,
+    )
+  })
+})
