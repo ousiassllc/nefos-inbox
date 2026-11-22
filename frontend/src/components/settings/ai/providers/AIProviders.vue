@@ -113,8 +113,12 @@ watch(
 }
 
 .itab {
+  display: flex;
+  align-items: center;
+  /* ガイドのタブ: 高さ 40（--control-h。下線 2px を含む）・左右 padding --s-3。SettingsDialog の .tab と同じ */
+  height: var(--control-h);
   margin-bottom: -1px;
-  padding: var(--s-2) var(--s-3);
+  padding: 0 var(--s-3);
   border: none;
   border-bottom: 2px solid transparent;
   background: transparent;

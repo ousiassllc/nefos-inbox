@@ -21,7 +21,7 @@ defineProps<{ kind: 'ok' | 'off' | 'warn' | 'wait' }>()
   background: var(--status-soft);
   color: var(--status-color);
   font-size: var(--font-size-xs);
-  line-height: 1;
+  line-height: var(--line-height-xs);
   white-space: nowrap;
 }
 
