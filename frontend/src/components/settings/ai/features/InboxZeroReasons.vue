@@ -69,8 +69,8 @@ async function toggle(reason: InboxZeroReason, on: boolean): Promise<void> {
   display: flex;
   flex-direction: column;
   gap: var(--s-1);
-  font-size: var(--font-size-sm);
-  line-height: var(--line-height-sm);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
 }
 
 .hint {

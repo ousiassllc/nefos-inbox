@@ -233,9 +233,10 @@ function saveManual(provider: string): void {
   min-height: 0;
   padding: 0;
   border-color: transparent;
-  font-weight: 500;
+  font-weight: 400;
   white-space: nowrap;
   text-decoration: underline;
+  text-decoration-color: var(--mute);
   text-underline-offset: 2px;
 }
 
