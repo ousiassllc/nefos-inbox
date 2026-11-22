@@ -23,6 +23,17 @@ describe('BaseDialog の本文', () => {
 
 // × ボタンのリングは --accent（ライト＝インク・ダーク＝ボーン色）。キーボード（:focus-visible）のときだけ出し、
 // マウスのクリック（:focus だけ）では出さない（#376・#377）。
+// 確認一覧は枠の角丸を overflow: hidden で切る。チェックボックスのリング（外側 5px）は .row の padding（左右 12px・上下 8px）に収まる（#433）。
+describe('InboxZeroDialog の確認一覧', () => {
+  test('.list は overflow: hidden で角を切り、行ごとの角丸（--r-* のスケール外の calc）は持たない', async () => {
+    const css = await styleOf('../inbox/InboxZeroDialog.vue')
+    const list = css.match(/\.list\s*\{([^}]*)\}/)?.[1] ?? ''
+    expect(list).toMatch(/border-radius:\s*var\(--r-md\);/)
+    expect(list).toMatch(/overflow:\s*hidden;/)
+    expect(css).not.toMatch(/:(first|last|only)-child \.row/)
+  })
+})
+
 describe('BaseDialog の × ボタン', () => {
   test('フォーカスリングは :focus-visible のときだけ、--accent の 2px・offset 2px', async () => {
     const css = await styleOf('./BaseDialog.vue')

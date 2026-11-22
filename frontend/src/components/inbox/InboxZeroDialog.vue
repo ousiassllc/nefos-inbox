@@ -135,6 +135,7 @@ function onReviewOpen(open: boolean): void {
   list-style: none;
   border: 1px solid var(--border);
   border-radius: var(--r-md);
+  overflow: hidden;
 }
 
 .list > li + li {
@@ -147,18 +148,6 @@ function onReviewOpen(open: boolean): void {
   gap: var(--s-3);
   padding: var(--s-2) var(--s-3);
   cursor: pointer;
-}
-
-.list > li:first-child .row {
-  border-radius: calc(var(--r-md) - 1px) calc(var(--r-md) - 1px) 0 0;
-}
-
-.list > li:last-child .row {
-  border-radius: 0 0 calc(var(--r-md) - 1px) calc(var(--r-md) - 1px);
-}
-
-.list > li:only-child .row {
-  border-radius: calc(var(--r-md) - 1px);
 }
 
 .row:hover {
