@@ -112,7 +112,8 @@ function onOpen(open: boolean): void {
 
 .confirm-from-label {
   color: var(--mute);
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
 }
 
 .warnings {
