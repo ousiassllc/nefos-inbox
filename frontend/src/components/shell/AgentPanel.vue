@@ -83,6 +83,11 @@ onBeforeUnmount(() => {
   overflow-y: auto;
 }
 
+.body:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
 /* 空状態のマスコットだけ --icon-xl（ガイド §6）。 */
 .empty-mascot {
   width: var(--icon-xl);
