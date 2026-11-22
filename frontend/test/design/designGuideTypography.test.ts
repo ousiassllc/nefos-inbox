@@ -157,3 +157,25 @@ describe('フォームのグループ見出し legend は h4 の段（T・#439�
     expect(sub).toContain('line-height: var(--line-height-sm)')
   })
 })
+
+describe('sm のラベル・補助文の行間（T3・T4・#443）', () => {
+  test.each([
+    ['account/AddAccountDialog.vue', '.field {'],
+    ['compose/ComposeFields.vue', '.subject-label {'],
+    ['compose/SenderField.vue', '.sender-label {'],
+    ['compose/ai/AiDraftInstruction.vue', '.instruction-label {'],
+    ['compose/recipient/RecipientField.vue', '.recipient-label {'],
+    ['settings/SettingsInput.vue', '.field-label {'],
+    ['settings/ai/features/AIUseTab.vue', '.alab {'],
+    ['thread/ai/ThreadAiQuestionForm.vue', '.question-label {'],
+    ['inbox/ListToolbar.vue', '.count {'],
+    ['inbox/ListToolbar.vue', '.mode {'],
+    ['inbox/ListToolbar.vue', '.back {'],
+    ['thread/MessageCard.vue', '.date {'],
+    ['inbox/ThreadList.vue', '.more {'],
+  ])('sm のラベル・補助文 %s %s は font-size と対の line-height を持つ', (file, selector) => {
+    const r = rule(file, selector)
+    expect(r).toContain('font-size: var(--font-size-sm)')
+    expect(r).toContain('line-height: var(--line-height-sm)')
+  })
+})

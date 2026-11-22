@@ -81,6 +81,7 @@ watch(model, () => void nextTick(fit))
 .instruction-label {
   color: var(--mute);
   font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
 }
 
 .instruction-input {

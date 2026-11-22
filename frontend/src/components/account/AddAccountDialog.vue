@@ -202,6 +202,7 @@ async function save(): Promise<void> {
   flex-direction: column;
   gap: var(--gap-label);
   font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
 }
 
 .text {
