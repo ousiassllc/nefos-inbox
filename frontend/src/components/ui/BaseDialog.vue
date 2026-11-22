@@ -25,6 +25,7 @@ const props = withDefaults(
     title: string
     /** 見出しの上に出す小さいラベル（製品・機能の名前など）。見出し（title）だけがダイアログの名前になる。 */
     eyebrow?: string
+    /** 見出しの下の補助文（`--mute`・sm）。1 文以内のキャプション専用。複数文の説明・同意文は本文（--ink・base）に置く（ガイド C6）。 */
     description?: string
     /** 中断できない処理の間（送信中・保存中）。外側クリック・Esc・× で閉じない。 */
     busy?: boolean
