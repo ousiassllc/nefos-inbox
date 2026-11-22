@@ -86,6 +86,6 @@ const { selectedIds, allSelected, toggle, selectAll } = useAccountFilter()
   height: 10px;
   border-radius: var(--r-full);
   background: color-mix(in srgb, var(--chip-tint) var(--tint-bg), var(--surface));
-  border: 1px solid color-mix(in srgb, var(--chip-tint) 70%, transparent);
+  border: 1px solid color-mix(in srgb, var(--chip-tint) var(--tint-border), transparent);
 }
 </style>
