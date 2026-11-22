@@ -6,6 +6,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { h, nextTick } from 'vue'
 import AccountList from '../../src/components/account/AccountList.vue'
+import InboxZeroButton from '../../src/components/inbox/InboxZeroButton.vue'
 import AlertStack from '../../src/components/shell/AlertStack.vue'
 import BaseButton from '../../src/components/ui/BaseButton.vue'
 import BaseDialog from '../../src/components/ui/BaseDialog.vue'
@@ -13,6 +14,7 @@ import BaseDisclosure from '../../src/components/ui/BaseDisclosure.vue'
 import BaseMenu from '../../src/components/ui/BaseMenu.vue'
 import ConfirmDialog from '../../src/components/ui/ConfirmDialog.vue'
 import Spinner from '../../src/components/ui/Spinner.vue'
+import { useInboxZeroStore } from '../../src/stores/inboxZero'
 import { useUiStore } from '../../src/stores/ui'
 
 afterEach(() => {
@@ -237,6 +239,36 @@ describe('モーション（M）', () => {
     const off = mount(BaseButton, { props: { disabled: true }, slots: { default: '送信' } })
     await off.trigger('pointerdown')
     expect(off.element.querySelectorAll('.ripple')).toHaveLength(0)
+  })
+
+  test('aria-busy・aria-disabled の要素（disabled にしないもの）の押下ではリップルが出ない（M4・#422）', async () => {
+    const w = mount(BaseButton, { slots: { default: '送信' }, attachTo: document.body })
+    const el = w.element as HTMLElement
+    for (const attr of ['aria-busy', 'aria-disabled']) {
+      el.setAttribute(attr, 'true')
+      await w.trigger('pointerdown')
+      expect(el.querySelectorAll('.ripple')).toHaveLength(0)
+      el.removeAttribute(attr)
+    }
+    await w.trigger('pointerdown')
+    expect(el.querySelectorAll('.ripple')).toHaveLength(1)
+    w.unmount()
+  })
+
+  test('Inbox Zero ボタンは押せないとき（aria-disabled）・判断中（aria-busy）にリップルが出ない（M4・#422）', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const w = mount(InboxZeroButton, { global: { plugins: [pinia] }, attachTo: document.body })
+    const btn = w.get('[data-testid="inbox-zero"]')
+    expect(btn.attributes('aria-disabled')).toBe('true') // 一覧が空
+    await btn.trigger('pointerdown')
+    expect(btn.element.querySelectorAll('.ripple')).toHaveLength(0)
+    useInboxZeroStore().phase = 'checking'
+    await nextTick()
+    expect(btn.attributes('aria-busy')).toBe('true')
+    await btn.trigger('pointerdown')
+    expect(btn.element.querySelectorAll('.ripple')).toHaveLength(0)
+    w.unmount()
   })
 
   test('右ボタン・中ボタンの押下ではリップルが出ない（M4）', async () => {
