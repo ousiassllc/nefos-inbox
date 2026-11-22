@@ -54,13 +54,13 @@ function onMore(key: string): void {
   <nav class="tabs" :aria-label="nav.tabs.label" data-testid="bottom-tabs">
     <button type="button" class="tab" :aria-current="current === 'inbox' ? 'page' : undefined" data-testid="tab-inbox" @click="show('inbox')">
       <span class="face">
-        <Mail class="icon icon-md" aria-hidden="true" />
+        <Mail class="icon" aria-hidden="true" />
         <CountBadge class="pill" :count="unread" :label="common.sidebar.unread(unread)" />
       </span>
       {{ nav.tabs.inbox }}
     </button>
     <button type="button" class="tab" :aria-current="current === 'drafts' ? 'page' : undefined" data-testid="tab-drafts" @click="show('drafts')">
-      <span class="face"><EditPencil class="icon icon-md" aria-hidden="true" /></span>
+      <span class="face"><EditPencil class="icon" aria-hidden="true" /></span>
       {{ nav.tabs.drafts }}
     </button>
     <button type="button" class="tab" aria-controls="agent-panel" :aria-expanded="ui.agentOpen" data-testid="tab-agent" @click="ui.openAgent()">
@@ -70,7 +70,7 @@ function onMore(key: string): void {
     <BaseMenu :items="moreItems" @select="onMore">
       <template #trigger>
         <button type="button" class="tab" :aria-current="current === 'more' ? 'page' : undefined" data-testid="tab-more">
-          <span class="face"><MoreHoriz class="icon icon-md" aria-hidden="true" /></span>
+          <span class="face"><MoreHoriz class="icon" aria-hidden="true" /></span>
           {{ nav.tabs.more }}
         </button>
       </template>
