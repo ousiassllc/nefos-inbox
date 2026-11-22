@@ -9,20 +9,20 @@ async function styleOf(file: string): Promise<string> {
   return descriptor.styles.map((s) => s.content).join('\n')
 }
 
+// スイッチ・チェックボックスのリングは 3px + offset 2px = 外側 5px なので、本文の余白も --s-1 + 1px（#434）。
 describe('BaseDialog の本文', () => {
-  test('縦スクロールの本文は四辺に --s-1 の余白を持ち、同じ分だけ負の margin で位置を保つ', async () => {
+  test('縦スクロールの本文は四辺に --s-1 + 1px の余白を持ち、同じ分だけ負の margin で位置を保つ', async () => {
     const css = await styleOf('./BaseDialog.vue')
     const body = css.match(/\.dlg-body\s*\{([^}]*)\}/)?.[1] ?? ''
     expect(body).toMatch(/overflow:\s*auto;/)
-    expect(body).toMatch(/padding:\s*var\(--s-1\);/)
+    expect(body).toMatch(/--ring-room:\s*calc\(var\(--s-1\) \+ 1px\);/)
+    expect(body).toMatch(/padding:\s*var\(--ring-room\);/)
     expect(body).toMatch(
-      /margin:\s*calc\(var\(--s-3\) - var\(--s-1\)\) calc\(var\(--s-1\) \* -1\) calc\(var\(--s-1\) \* -1\);/,
+      /margin:\s*calc\(var\(--s-3\) - var\(--ring-room\)\) calc\(var\(--ring-room\) \* -1\) calc\(var\(--ring-room\) \* -1\);/,
     )
   })
 })
 
-// × ボタンのリングは --accent（ライト＝インク・ダーク＝ボーン色）。キーボード（:focus-visible）のときだけ出し、
-// マウスのクリック（:focus だけ）では出さない（#376・#377）。
 // 確認一覧は枠の角丸を overflow: hidden で切る。チェックボックスのリング（外側 5px）は .row の padding（左右 12px・上下 8px）に収まる（#433）。
 describe('InboxZeroDialog の確認一覧', () => {
   test('.list は overflow: hidden で角を切り、行ごとの角丸（--r-* のスケール外の calc）は持たない', async () => {
@@ -34,6 +34,8 @@ describe('InboxZeroDialog の確認一覧', () => {
   })
 })
 
+// × ボタンのリングは --accent（ライト＝インク・ダーク＝ボーン色）。キーボード（:focus-visible）のときだけ出し、
+// マウスのクリック（:focus だけ）では出さない（#376・#377）。
 describe('BaseDialog の × ボタン', () => {
   test('フォーカスリングは :focus-visible のときだけ、--accent の 2px・offset 2px', async () => {
     const css = await styleOf('./BaseDialog.vue')
