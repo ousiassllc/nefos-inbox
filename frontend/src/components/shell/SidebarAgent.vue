@@ -17,7 +17,7 @@ const ui = useUiStore()
     data-testid="agent-entry"
     @click="ui.agentOpen ? ui.closeAgent() : ui.openAgent()"
   >
-    <AgentMascot :size="32" />
+    <AgentMascot :size="24" />
     <span class="text">
       <span class="title">{{ nav.agent.label }}</span>
       <span class="sub">{{ nav.agent.preparing }}</span>
