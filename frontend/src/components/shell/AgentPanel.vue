@@ -27,7 +27,7 @@ onBeforeUnmount(() => {
 <template>
   <aside id="agent-panel" ref="panel" tabindex="-1" class="panel" :aria-label="nav.agent.panelTitle" data-testid="agent-panel" @keydown.esc.stop="ui.closeAgent()">
     <header class="head">
-      <AgentMascot :size="32" />
+      <AgentMascot :size="24" />
       <h2 class="title">{{ nav.agent.panelTitle }}</h2>
       <BaseIconButton :label="nav.agent.close" data-testid="agent-close" @click="ui.closeAgent()">
         <Xmark class="icon" aria-hidden="true" />
@@ -35,7 +35,7 @@ onBeforeUnmount(() => {
     </header>
     <div v-overlay-scroll="{ fade: 'var(--surface)' }" class="body">
       <EmptyState>
-        <template #icon><AgentMascot :size="48" /></template>
+        <template #icon><AgentMascot :size="32" /></template>
         {{ nav.agent.panelBody }}
       </EmptyState>
     </div>

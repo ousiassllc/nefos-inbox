@@ -64,7 +64,7 @@ function onMore(key: string): void {
       {{ nav.tabs.drafts }}
     </button>
     <button type="button" class="tab" aria-controls="agent-panel" :aria-expanded="ui.agentOpen" data-testid="tab-agent" @click="ui.openAgent()">
-      <span class="face"><AgentMascot :size="26" /></span>
+      <span class="face"><AgentMascot :size="24" /></span>
       {{ nav.tabs.agent }}
     </button>
     <BaseMenu :items="moreItems" @select="onMore">
