@@ -228,6 +228,7 @@ function saveManual(provider: string): void {
   align-items: center;
   min-height: var(--control-h);
   font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
 }
 
 .link {
