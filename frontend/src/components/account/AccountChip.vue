@@ -46,6 +46,5 @@ withDefaults(
 .account-chip-email {
   overflow: hidden;
   text-overflow: ellipsis;
-  opacity: 0.9;
 }
 </style>

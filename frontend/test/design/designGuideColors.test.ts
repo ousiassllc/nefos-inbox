@@ -19,3 +19,11 @@ describe('長文・複数文は --mute にしない（C6・#210）', () => {
     expect(quote).toContain('color: var(--ink)')
   })
 })
+
+describe('識別色の地の上の文字は薄めない（C2・C6・#425）', () => {
+  test('AccountChip のアドレスは opacity で薄めず、継承の --ink のまま', () => {
+    const body = rule('account/AccountChip.vue', '.account-chip-email {')
+    expect(body).not.toContain('opacity')
+    expect(body).not.toContain('color:')
+  })
+})
