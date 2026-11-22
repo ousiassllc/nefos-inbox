@@ -20,6 +20,11 @@ defineProps<{ size?: number }>()
   color: var(--ink);
 }
 
+/* viewBox（40）を拡縮しても描画後のストロークは 1.5px のまま（Iconoir のアイコンと同じ太さ。ガイド I2）。 */
+.mascot path {
+  vector-effect: non-scaling-stroke;
+}
+
 .leaf {
   fill: var(--accent-soft);
   stroke: currentColor;
