@@ -44,6 +44,7 @@ const text = (d: { providerLabel: string; url: string }) => msg.ai.destination(d
   margin: 0 0 var(--s-2);
   padding: 0;
   font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
   font-weight: 600;
 }
 

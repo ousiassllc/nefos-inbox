@@ -126,3 +126,15 @@ describe('タブ先頭の題と xs の文字の行間（T4・T8・#436）', () =
     expect(r).toContain('line-height: var(--line-height-xs)')
   })
 })
+
+describe('sm の見出しの行間（T・#438）', () => {
+  test.each([
+    ['settings/ai/AIDestinationBox.vue', '.dest-title {'],
+    ['settings/oauth/OAuthClientForm.vue', '.title {'],
+    ['thread/ai/ThreadAiPanel.vue', '.heading {'],
+  ])('sm の見出し %s %s は font-size と対の line-height を持つ', (file, selector) => {
+    const r = rule(file, selector)
+    expect(r).toContain('font-size: var(--font-size-sm)')
+    expect(r).toContain('line-height: var(--line-height-sm)')
+  })
+})
