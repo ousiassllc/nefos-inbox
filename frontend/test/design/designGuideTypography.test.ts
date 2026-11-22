@@ -138,3 +138,21 @@ describe('sm の見出しの行間（T・#438）', () => {
     expect(r).toContain('line-height: var(--line-height-sm)')
   })
 })
+
+describe('フォームのグループ見出し legend は h4 の段（T・#439）', () => {
+  test('AIChatGPTLogin の .legend は sm 14・SemiBold・--ink で、同じファイルの h4 の .sub と段が揃う', () => {
+    const legend = rule('settings/ai/AIChatGPTLogin.vue', '.legend {')
+    expect(legend).toContain('font-size: var(--font-size-sm)')
+    expect(legend).toContain('font-weight: 600')
+    expect(legend).toContain('line-height: var(--line-height-sm)')
+    expect(legend).toContain('color: var(--ink)')
+    expect(legend).not.toContain('--mute')
+  })
+
+  test('InboxZeroReasons の legend（.sub）も sm・600 で、設定画面内のグループ見出しが揃う', () => {
+    const sub = rule('settings/ai/features/InboxZeroReasons.vue', '.sub {')
+    expect(sub).toContain('font-size: var(--font-size-sm)')
+    expect(sub).toContain('font-weight: 600')
+    expect(sub).toContain('line-height: var(--line-height-sm)')
+  })
+})
