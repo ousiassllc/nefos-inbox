@@ -46,7 +46,7 @@ async function toggle(reason: InboxZeroReason, on: boolean): Promise<void> {
 .reasons {
   display: flex;
   flex-direction: column;
-  gap: var(--s-3);
+  gap: var(--gap-field);
   margin: 0;
   padding: 0;
   border: none;
@@ -54,6 +54,7 @@ async function toggle(reason: InboxZeroReason, on: boolean): Promise<void> {
 
 .sub {
   padding: 0;
+  margin-bottom: var(--s-2);
   font-weight: 600;
   font-size: var(--font-size-sm);
   line-height: var(--line-height-sm);
