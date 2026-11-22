@@ -32,4 +32,12 @@ import { common } from '../../lib/messages'
     animation: none;
   }
 }
+
+/* 強制カラーでは 4 辺が同じ色に強制されて円弧が消えるので、track を透明にして先端だけを CanvasText で残す（回転しなくても処理中だとわかる。BaseButton 内は BaseButton 側が ButtonText で描く）。 */
+@media (forced-colors: active) {
+  .spinner {
+    border-color: transparent;
+    border-top-color: CanvasText;
+  }
+}
 </style>
