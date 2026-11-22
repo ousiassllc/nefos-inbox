@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import { MagicWand } from '@iconoir/vue'
 import { computed, onMounted, watch } from 'vue'
 import { parseBindingError } from '../../../../lib/api'
 import { settings as msg } from '../../../../lib/messages'
 import { useSettingsStore } from '../../../../stores/settings'
 import { useUiStore } from '../../../../stores/ui'
 import BaseButton from '../../../ui/BaseButton.vue'
+import EmptyState from '../../../ui/EmptyState.vue'
 import AIStatusChip from '../providers/AIStatusChip.vue'
 import { AI_PROVIDERS, isConnected } from '../providers/aiProviders'
 import AIFeatureRow from './AIFeatureRow.vue'
@@ -62,37 +64,42 @@ function fix(provider: string): void {
 
 <template>
   <section class="use" :aria-label="t.heading" data-testid="ai-use-tab">
-    <div class="group">
-      <h3 class="sh">{{ t.heading }}</h3>
-      <p v-if="!showEmpty" class="hint">{{ t.hint }}</p>
+    <div class="block">
+      <div class="group">
+        <h3 class="sh">{{ t.heading }}</h3>
+        <p v-if="!showEmpty" class="hint">{{ t.hint }}</p>
+      </div>
+      <EmptyState v-if="showEmpty" data-testid="ai-use-empty">
+        <template #icon><MagicWand class="icon icon-lg" /></template>
+        {{ t.empty }}
+        <template #action>
+          <BaseButton variant="secondary" size="sm" data-testid="ai-use-connect" @click="goConnect">{{ t.connect }}</BaseButton>
+        </template>
+      </EmptyState>
+      <ul v-else class="box" :aria-label="t.listLabel" data-testid="ai-feature-list">
+        <AIFeatureRow
+          feature="draft"
+          :label="t.features.draft"
+          @connect="(p) => (p ? fix(p) : goConnect())"
+        />
+        <AIFeatureRow
+          feature="threadAi"
+          :label="t.features.threadAi"
+          @connect="(p) => (p ? fix(p) : goConnect())"
+        />
+        <AIFeatureRow
+          feature="inboxZero"
+          :label="t.features.inboxZero"
+          @connect="(p) => (p ? fix(p) : goConnect())"
+        />
+        <li class="agent" aria-disabled="true" data-testid="ai-feature-agent">
+          <div class="alab">
+            {{ t.features.agent }}
+            <AIStatusChip kind="wait">{{ t.soon }}</AIStatusChip>
+          </div>
+        </li>
+      </ul>
     </div>
-    <div v-if="showEmpty" class="empty" data-testid="ai-use-empty">
-      <p class="empty-text">{{ t.empty }}</p>
-      <BaseButton variant="secondary" size="sm" data-testid="ai-use-connect" @click="goConnect">{{ t.connect }}</BaseButton>
-    </div>
-    <ul v-else class="box" :aria-label="t.listLabel" data-testid="ai-feature-list">
-      <AIFeatureRow
-        feature="draft"
-        :label="t.features.draft"
-        @connect="(p) => (p ? fix(p) : goConnect())"
-      />
-      <AIFeatureRow
-        feature="threadAi"
-        :label="t.features.threadAi"
-        @connect="(p) => (p ? fix(p) : goConnect())"
-      />
-      <AIFeatureRow
-        feature="inboxZero"
-        :label="t.features.inboxZero"
-        @connect="(p) => (p ? fix(p) : goConnect())"
-      />
-      <li class="agent" aria-disabled="true" data-testid="ai-feature-agent">
-        <div class="alab">
-          {{ t.features.agent }}
-          <AIStatusChip kind="wait">{{ t.soon }}</AIStatusChip>
-        </div>
-      </li>
-    </ul>
     <InboxZeroReasons />
   </section>
 </template>
@@ -101,7 +108,7 @@ function fix(provider: string): void {
 .use {
   display: flex;
   flex-direction: column;
-  gap: var(--s-3);
+  gap: var(--gap-field);
 }
 
 .group {
@@ -137,23 +144,10 @@ function fix(provider: string): void {
   border-top: 1px solid var(--border);
 }
 
-.empty {
+.block {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
   gap: var(--s-3);
-  padding: var(--s-6) var(--s-4);
-  border: 1px dashed var(--border);
-  border-radius: var(--r-lg);
-  line-break: strict;
-  word-break: keep-all;
-}
-
-.empty-text {
-  margin: 0;
-  color: var(--mute);
-  font-size: var(--font-size-sm);
-  line-height: var(--line-height-sm);
 }
 
 /* エージェント: 準備中。選べない（保存もしない）ので、行ごと薄くして押せなくする。 */

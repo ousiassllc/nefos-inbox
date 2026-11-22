@@ -125,6 +125,7 @@ async function disconnect(): Promise<void> {
   margin: 0;
   color: var(--danger);
   font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
 }
 
 /* 390px 幅: 行はそれぞれ枠のあるカードにし、一覧の外枠は外す。 */

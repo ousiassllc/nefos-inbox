@@ -32,9 +32,9 @@ defineProps<{ kind: 'ok' | 'off' | 'warn' | 'wait' }>()
 }
 
 .status-warn {
-  --status-color: var(--danger);
-  --status-border: var(--danger-border);
-  --status-soft: var(--danger-soft);
+  --status-color: var(--warning);
+  --status-border: var(--warning-border);
+  --status-soft: var(--warning-soft);
 }
 
 .status-wait {
