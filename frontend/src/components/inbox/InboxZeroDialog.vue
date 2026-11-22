@@ -83,7 +83,7 @@ function onReviewOpen(open: boolean): void {
     </p>
     <ul class="list" :aria-label="t.listLabel" data-testid="inbox-zero-list">
       <li v-for="c in zero.candidates" :key="keyOf(c.ref)">
-        <!-- biome-ignore lint/a11y/noLabelWithoutControl: 中の BaseCheckbox の根が <input>（Biome はコンポーネントを入力と見なせない） -->
+        <!-- biome-ignore lint/a11y/noLabelWithoutControl: 中の BaseCheckbox の根は <span> で、<input> はその中にある（Biome はコンポーネントの中の入力を見つけられない） -->
         <label class="row">
           <BaseCheckbox
             :model-value="zero.checked.has(keyOf(c.ref))"
@@ -152,6 +152,10 @@ function onReviewOpen(open: boolean): void {
 
 .row:hover {
   background: var(--accent-soft);
+}
+
+.row .checkbox {
+  margin-top: calc((var(--font-size-sm) * var(--line-height-sm) - 18px) / 2);
 }
 
 .text {
