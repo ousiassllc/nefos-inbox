@@ -905,3 +905,4 @@ OAuth（Google）と Sign in with ChatGPT の `127.0.0.1` 待受が返す完了�
 | 2.66 | 2026-11-23 | Inbox Zero の「判断中」ダイアログ（`InboxZeroDialog` の checking）の `BaseDialog` に `body-label`（「Inbox Zero：判断中」）を足し、本文に領域名と `tabindex=0` が付くようにした（同意ダイアログ・`AddAccountDialog` の認可待ちと同じ） | Refs #416 |
 | 2.67 | 2026-11-23 | Inbox Zero で候補が 0 件のときのトーストを「不要なメールは見つかりませんでした。」の 1 文にし、「（N 件を確認）」を削った（O3: トーストは 1 行の短文。狭幅で省略記号に切れていた）。`InboxZeroResult.examined` は API に残るが、この表示には使わない | Refs #418 |
 | 2.68 | 2026-11-23 | `InboxZeroDialog` の確認一覧のチェックボックス（マークアップと `.box` の CSS）を共通部品 `BaseCheckbox`（`components/ui/`）に切り出した。見た目・挙動は変えない（`components/inbox/` の行数を `linterly` の上限内に収めるため）。§3.3 の部品表に `BaseCheckbox` を足した | Refs #416 |
+| 2.69 | 2026-11-23 | リップル（`lib/ripple.ts` の `spawn`）が、`disabled` の `<button>` に加えて `aria-busy="true"`・`aria-disabled="true"` の要素でも出ないようにした（`InboxZeroButton` は処理中・押せないときを `disabled` にしないため、押すとリップルが出ていた）。`BaseButton`・`BaseIconButton` の loading にも効く | Refs #422 |
