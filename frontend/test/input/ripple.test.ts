@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { spawn } from './ripple'
+import { spawn } from '../../src/lib/ripple'
 
 function press(attrs: Record<string, string>): HTMLButtonElement {
   const button = document.createElement('button')
