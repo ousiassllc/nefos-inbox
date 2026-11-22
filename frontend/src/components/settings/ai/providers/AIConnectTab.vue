@@ -54,7 +54,7 @@ async function disconnect(): Promise<void> {
 <template>
   <section class="connect" :aria-label="t.heading" data-testid="ai-connect-tab">
     <div class="group">
-      <h4 class="sh">{{ t.heading }}</h4>
+      <h3 class="sh">{{ t.heading }}</h3>
       <p class="hint">{{ t.hint }}</p>
     </div>
     <ul class="box" :aria-label="t.listLabel" data-testid="ai-provider-list">

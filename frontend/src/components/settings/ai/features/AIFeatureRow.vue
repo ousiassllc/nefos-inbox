@@ -178,7 +178,6 @@ function saveManual(provider: string): void {
   align-items: center;
   width: 148px;
   min-height: var(--control-h);
-  font-weight: 500;
   font-size: var(--font-size-sm);
   line-height: var(--line-height-sm);
 }

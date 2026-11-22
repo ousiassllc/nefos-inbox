@@ -63,7 +63,7 @@ function fix(provider: string): void {
 <template>
   <section class="use" :aria-label="t.heading" data-testid="ai-use-tab">
     <div class="group">
-      <h4 class="sh">{{ t.heading }}</h4>
+      <h3 class="sh">{{ t.heading }}</h3>
       <p v-if="!showEmpty" class="hint">{{ t.hint }}</p>
     </div>
     <div v-if="showEmpty" class="empty" data-testid="ai-use-empty">
@@ -169,7 +169,6 @@ function fix(provider: string): void {
   display: flex;
   align-items: center;
   gap: var(--s-2);
-  font-weight: 500;
   font-size: var(--font-size-sm);
 }
 

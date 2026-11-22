@@ -83,7 +83,6 @@ const note = computed(() => {
   flex-wrap: wrap;
   align-items: center;
   gap: var(--s-2);
-  font-weight: 500;
   font-size: var(--font-size-sm);
   line-height: var(--line-height-sm);
 }
