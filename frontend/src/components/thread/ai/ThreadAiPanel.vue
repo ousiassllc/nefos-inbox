@@ -164,6 +164,7 @@ function ask(): void {
   margin-right: auto;
   font-weight: 600;
   font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
   color: var(--ink);
 }
 
