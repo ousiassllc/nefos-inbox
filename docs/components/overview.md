@@ -290,7 +290,7 @@ graph TD
 
 | コンポーネント | 責務 | Props／Emits | バインディング／ストア |
 |----------------|------|--------------|------------------------|
-| `AccountChip` | アカウントの名前（＋アドレス）のチップ。地は識別色を `--surface` に混ぜた薄い色、字は `--ink`、枠は識別色を薄めた 1px（`BaseChip` の `tint`）。**色だけに依存せず名前を併記**（NF §11） | props: `account`, `showEmail?`, `size` | — |
+| `AccountChip` | アカウントの名前（＋アドレス）のチップ。地は識別色を `--surface` に混ぜた薄い色、字は `--ink`、アドレスも薄めず `--ink`（不透明度で薄めない。#425）、枠は識別色を薄めた 1px（`BaseChip` の `tint`）。**色だけに依存せず名前を併記**（NF §11） | props: `account`, `showEmail?`, `size` | — |
 | `SenderBadge` | 送信元の表示（名前・アドレス）。枠はダイアログと同じ中立（地 `--surface`・枠 `1px --border`。識別色で面を塗らない）。識別は名前の薄いチップ（`BaseChip` の `tint`。一覧の `AccountChip` と同じ沈め方）だけで、アドレスは `--ink` の文字でチップの隣（収まらなければ下）に置く。名前が無いときはアドレスをチップに入れる。帯は無い。確認ダイアログで使う | props: `from`, `color` | — |
 | `SidebarPlaces` | **見る場所**（#370）: 受信箱・下書き・送信済み・アーカイブ（`composables/usePlaces.ts`。受信箱・送信済み・アーカイブは `lib/inboxViews.ts` の `INBOX_VIEWS`）。受信箱の行にだけ未読数（`CountBadge`）を付ける。今いる場所は `aria-current="page"`。押すと `inboxStore.setView`（アカウントの絞り込み・未読のみは保つ。下書きの一覧は閉じる）。「下書き」は `draftsStore.show()` で下書きの一覧（#366。F-12）を開き、今いる場所は `draftsStore.active` の間は下書き。件数は付けない | — | `usePlaces`（`inboxStore.view`・`setView`、`draftsStore`） |
 | `AccountList`／`AccountItem` | **アカウントの絞り込み**（#370。見る場所とは別の軸で、組み合わせて効く）。見出し「アカウント」の下に「全アカウント」（カテゴリタブの「すべて」と見分ける文言）・各アカウント（`AccountChip`＋アドレス。左の識別帯は無い）・「アカウントを追加」。選択は単一／複数（Ctrl/Cmd）／全アカウント（`lib/accountSelect.ts` の `nextAccountIds`）。アカウントごとの未読は件数バッジにせず、行の右に Mono・`--mute` の数字だけ添える（受信箱の件数バッジと重みを分ける）。`needs_reauth` の警告アイコン | emits: `reconnect(id)`、`add` | `accountsStore`、`inboxStore.unreadCounts`、`useAccountFilter` |
@@ -908,3 +908,4 @@ OAuth（Google）と Sign in with ChatGPT の `127.0.0.1` 待受が返す完了�
 | 2.69 | 2026-11-23 | `BaseCheckbox` のチェックマークを CSS の手描き（`::after`・線 2px）から Iconoir の `Check`（`icon-sm`・`--bone`・`aria-hidden`）に変えた（I1・I2）。`<input>` を `<span>` で包み、属性（`data-testid` など）は `<input>` へ渡す。見た目・挙動は変えない。§3.3 の部品表の `BaseCheckbox` の行を更新 | Refs #421 |
 | 2.70 | 2026-11-23 | `SendConfirmDialog` の「差出人」のラベル（`.confirm-from-label`）と `AIEffortField` の「エフォート」のラベルを、ほかのフォームのラベルと同じ `--font-size-sm`・`--line-height-sm` にした（`.confirm-fields dt` と段を揃えた）。`AIEffortField` は色も `SettingsInput` の `.field-label` と同じ（継承の `--ink`）にし、640px 以下の字の上書きをなくした | Refs #423 |
 | 2.71 | 2026-11-23 | リップル（`lib/ripple.ts` の `spawn`）が、`disabled` の `<button>` に加えて `aria-busy="true"`・`aria-disabled="true"` の要素でも出ないようにした（`InboxZeroButton` は処理中・押せないときを `disabled` にしないため、押すとリップルが出ていた）。`BaseButton`・`BaseIconButton` の loading にも効く | Refs #422 |
+| 2.72 | 2026-11-23 | `AccountChip` のアドレス（`.account-chip-email`）にあった `opacity: 0.9` を外し、名前と同じ `--ink` のままにした（C2・C6: 識別色の薄い地の上で字をトークン以外の濃さにしない）。名前とアドレスの並びは変えない | Refs #425 |
