@@ -203,6 +203,10 @@ describe('Inbox Zero の判断中のダイアログ（#343）', () => {
     expect(document.querySelector('[data-testid="inbox-zero-checking-cancel"]')?.textContent).toBe(
       'やめる',
     )
+    expect(document.querySelector('.dlg-body')?.getAttribute('tabindex')).toBe('0')
+    expect(document.querySelector('.dlg-body')?.getAttribute('aria-label')).toBe(
+      'Inbox Zero：判断中',
+    )
     w.unmount()
 
     document.body.innerHTML = ''
