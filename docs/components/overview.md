@@ -899,3 +899,4 @@ OAuth（Google）と Sign in with ChatGPT の `127.0.0.1` 待受が返す完了�
 | 2.61 | 2026-11-23 | `AIUseTab` の「使える AI がありません」の空状態を、独自の div から共通の `EmptyState`（`action` スロットに「AI をつなぐ」）に置き換えた。`.use` の間隔を `--gap-field`（16）にし、見出し→一覧は 12 のまま `.block` で包んだ | Refs #414 |
 | 2.62 | 2026-11-23 | 折り返しうる sm の文章 3 か所（`AIFeatureRow` の `.fmsg`・`InboxZeroReasons` と `AIConnectTab` の `.error`）に `line-height: var(--line-height-sm)` を足した | Refs #415 |
 | 2.63 | 2026-11-23 | `AIProviders` の内側のタブ `.itab` を、`SettingsDialog` の `.tab` と同じ高さ 40（`--control-h`）・左右 padding `--s-3` にした（縦 padding＋本文の行間で 40 を超えていた） | Refs #419 |
+| 2.64 | 2026-11-23 | `AIStatusChip` の `line-height: 1` を `--line-height-xs` にし、ほかの 1 行ピル（`ChatGPTAccountRow` の `.badge`・`McpSettings` の `.state`・`CountBadge`）と揃えた（表示は変わらない） | Refs #420 |
