@@ -705,8 +705,8 @@ Gmail 互換の単独キー。**入力要素（`input`／`textarea`／`contented
 
 OAuth（Google）と Sign in with ChatGPT の `127.0.0.1` 待受が返す完了ページ（`internal/callbackpage`。`oauth`・`siwc` の両方がここを呼ぶ）は、Vue の外の Go 埋め込み HTML なので `styles/tokens.css` を `import` できない。方針は次のとおり。
 
-- **値は複製する**（ビルド時の共有・生成はしない）。完了ページが持つのは、色 `--ink`・`--bone`・`--surface`・`--border`（ライト・ダーク）、フォント、見出し `--font-size-lg`／`--line-height-lg`・本文 `--font-size-base`／`--line-height-base`、カードの `--s-6`・`--r-lg`、見出し下の `--s-3` だけ。色は完了ページの `:root` に同名の変数で置き、ダークは `prefers-color-scheme` で切り替える。
-- **同期はテストで担保する**。`internal/callbackpage/callbackpage_test.go` の `TestPageValuesMatchTokens` が `frontend/src/styles/tokens.css` を読み、上の値が一致しなければ落ちる。トークンを変えたら `callbackpage.go` の `page` も同じ値に直す（`TestPageColorsComeFromTokens` が `:root` の外の色の直書きを、`TestPageTypography`・`TestPageCardShape` がガイドのスケールと形を検証する）。
+- **値は複製する**（ビルド時の共有・生成はしない）。完了ページが持つのは、色 `--ink`・`--bone`・`--surface`・`--border`・`--mute`（ライト・ダーク）、フォント、見出し `--font-size-lg`／`--line-height-lg`・本文 `--font-size-base`／`--line-height-base`、カードの `--s-6`・`--r-lg`、見出し下の `--s-3`、スクロールバーの `--mute`（thumb）・`--ink`（hover・active の混ぜ色）だけ。スクロールバーは `styles/scrollbar.css` と同じ構造・値（8px・矢印なし・`--mute` の thumb・hover は `--ink` 35%・active は `--ink` 65%。`@media (forced-colors: none)`＋`@supports selector(::-webkit-scrollbar)`）で、本文の `p` は `overflow-wrap: anywhere` で横あふれを止める。色は完了ページの `:root` に同名の変数で置き、ダークは `prefers-color-scheme` で切り替える。
+- **同期はテストで担保する**。`internal/callbackpage/callbackpage_test.go` の `TestPageValuesMatchTokens` が `frontend/src/styles/tokens.css` を読み、上の値が一致しなければ落ちる（スクロールバーの寸法・混ぜ率は `TestPageScrollbarMatchesScrollbarCSS` が `scrollbar.css` と照合する）。トークンを変えたら `callbackpage.go` の `page` も同じ値に直す（`TestPageColorsComeFromTokens` が `:root` の外の色の直書きを、`TestPageTypography`・`TestPageCardShape` がガイドのスケールと形を検証する）。
 - フォント名だけは上の逸脱表のとおり、同梱フォントの名前（`… Variable`）ではなく端末のフォント名にする。ガイドへ提案する事項は無い（案件内で完結する）。
 
 ## 6. 要件との対応
@@ -908,3 +908,4 @@ OAuth（Google）と Sign in with ChatGPT の `127.0.0.1` 待受が返す完了�
 | 2.69 | 2026-11-23 | `BaseCheckbox` のチェックマークを CSS の手描き（`::after`・線 2px）から Iconoir の `Check`（`icon-sm`・`--bone`・`aria-hidden`）に変えた（I1・I2）。`<input>` を `<span>` で包み、属性（`data-testid` など）は `<input>` へ渡す。見た目・挙動は変えない。§3.3 の部品表の `BaseCheckbox` の行を更新 | Refs #421 |
 | 2.70 | 2026-11-23 | `SendConfirmDialog` の「差出人」のラベル（`.confirm-from-label`）と `AIEffortField` の「エフォート」のラベルを、ほかのフォームのラベルと同じ `--font-size-sm`・`--line-height-sm` にした（`.confirm-fields dt` と段を揃えた）。`AIEffortField` は色も `SettingsInput` の `.field-label` と同じ（継承の `--ink`）にし、640px 以下の字の上書きをなくした | Refs #423 |
 | 2.71 | 2026-11-23 | リップル（`lib/ripple.ts` の `spawn`）が、`disabled` の `<button>` に加えて `aria-busy="true"`・`aria-disabled="true"` の要素でも出ないようにした（`InboxZeroButton` は処理中・押せないときを `disabled` にしないため、押すとリップルが出ていた）。`BaseButton`・`BaseIconButton` の loading にも効く | Refs #422 |
+| 2.72 | 2026-11-23 | 認可の完了ページ（`internal/callbackpage`）の本文 `p` に `overflow-wrap: anywhere` を足し、viewport のスクロールバーを `scrollbar.css` と同じ設計（8px・矢印なし・`--mute` の thumb・hover/active は `--ink` 35%/65%）にした。「フロントの外にある画面」の持つ値に `--mute`・スクロールバーを加えた（B1・B2） | Refs #424 |
