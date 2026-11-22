@@ -222,6 +222,7 @@ describe('buildSrcdoc / buildCsp', () => {
     expect(doc).toContain(':root{color-scheme:light}')
     expect(doc).toContain('background:Canvas;color:CanvasText;')
     expect(doc).toContain('font:14px/1.5 sans-serif')
+    expect(doc).toContain('a{color:CanvasText;text-decoration:underline;cursor:pointer}')
   })
 })
 

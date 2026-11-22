@@ -173,6 +173,7 @@ describe('sm のラベル・補助文の行間（T3・T4・#443）', () => {
     ['inbox/ListToolbar.vue', '.back {'],
     ['thread/MessageCard.vue', '.date {'],
     ['inbox/ThreadList.vue', '.more {'],
+    ['settings/ai/features/AIFeatureRow.vue', '.fixed {'],
   ])('sm のラベル・補助文 %s %s は font-size と対の line-height を持つ', (file, selector) => {
     const r = rule(file, selector)
     expect(r).toContain('font-size: var(--font-size-sm)')
