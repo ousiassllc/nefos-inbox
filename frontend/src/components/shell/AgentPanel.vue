@@ -36,7 +36,7 @@ onBeforeUnmount(() => {
     <!-- biome-ignore lint/a11y/noNoninteractiveTabindex lint/a11y/useSemanticElements: スクロール領域は子にフォーカス可能な要素が無く、Tab で入れないとキーボードで動かせない。ガイド B6 の指定（tabindex=0・role=region・領域名）。中身に操作要素ができたら外してよい -->
     <div v-overlay-scroll="{ fade: 'var(--surface)' }" class="body" tabindex="0" role="region" :aria-label="nav.agent.panelTitle">
       <EmptyState>
-        <template #icon><AgentMascot :size="32" /></template>
+        <template #icon><AgentMascot class="empty-mascot" /></template>
         {{ nav.agent.panelBody }}
       </EmptyState>
     </div>
@@ -81,5 +81,11 @@ onBeforeUnmount(() => {
   min-height: 0;
   padding: var(--s-6);
   overflow-y: auto;
+}
+
+/* 空状態のマスコットだけ --icon-xl（ガイド §6）。 */
+.empty-mascot {
+  width: var(--icon-xl);
+  height: var(--icon-xl);
 }
 </style>

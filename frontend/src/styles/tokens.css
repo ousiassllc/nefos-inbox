@@ -95,6 +95,8 @@
   --icon-sm: 16px;
   --icon-md: 20px;
   --icon-lg: 24px;
+  /* 空状態のマスコットだけ（ガイド §6）。UI のアイコンには使わない */
+  --icon-xl: 32px;
 
   /* モーション */
   --motion-fast: 120ms;
