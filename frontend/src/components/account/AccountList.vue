@@ -2,6 +2,7 @@
 import { Plus, User } from '@iconoir/vue'
 import { useAccountFilter } from '../../composables/useAccountFilter'
 import { common, nav } from '../../lib/messages'
+import { vRipple } from '../../lib/ripple'
 import { useAccountsStore } from '../../stores/accounts'
 import { useInboxStore } from '../../stores/inbox'
 import EmptyState from '../ui/EmptyState.vue'
@@ -40,7 +41,7 @@ const emit = defineEmits<{ reconnect: [id: string]; add: [] }>()
       <template #icon><User class="icon icon-lg" /></template>
       {{ common.sidebar.noAccounts }}
     </EmptyState>
-    <button type="button" class="add" @click="emit('add')">
+    <button v-ripple type="button" class="add" @click="emit('add')">
       <Plus class="icon icon-sm" aria-hidden="true" />{{ common.sidebar.addAccount }}
     </button>
   </section>
