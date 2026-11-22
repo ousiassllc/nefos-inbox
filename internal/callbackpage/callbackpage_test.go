@@ -41,7 +41,7 @@ func TestPageColorsComeFromTokens(t *testing.T) {
 		if strings.HasPrefix(line, ":root{") || strings.HasPrefix(line, "@media") {
 			continue // トークンの定義行
 		}
-		if hex.MatchString(line) || strings.Contains(line, "rgb") {
+		if hex.MatchString(line) || strings.Contains(strings.ReplaceAll(line, "srgb", ""), "rgb") { // srgb は color-mix の色空間名
 			t.Errorf("hard-coded color outside token definitions: %s", line)
 		}
 	}
@@ -58,7 +58,7 @@ func TestPageTypography(t *testing.T) {
 	for _, want := range []string{
 		`font-family:Sora,"Noto Sans JP",sans-serif`,
 		"h1{font-size:18px;line-height:1.7;font-weight:600;",
-		"p{margin:0;font-size:16px;line-height:1.8}",
+		"p{margin:0;font-size:16px;line-height:1.8;overflow-wrap:anywhere}",
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("missing %q", want)
@@ -125,8 +125,8 @@ func TestPageValuesMatchTokens(t *testing.T) {
 	}
 	for i, want := range []map[string]string{light, dark} {
 		got := regexp.MustCompile(`(--[a-z]+):([^;]+)`).FindAllStringSubmatch(root[i][1], -1)
-		if len(got) != 4 {
-			t.Fatalf("scheme %d: %d tokens, want 4 (ink, bone, surface, border)", i, len(got))
+		if len(got) != 5 {
+			t.Fatalf("scheme %d: %d tokens, want 5 (ink, bone, surface, border, mute)", i, len(got))
 		}
 		for _, g := range got {
 			if g[2] != want[g[1]] {
@@ -136,7 +136,7 @@ func TestPageValuesMatchTokens(t *testing.T) {
 	}
 
 	// トークンが改名・削除されると下の期待値が空文字を含んで常に一致してしまうので、先に存在を確かめる。
-	for _, k := range []string{"--font-sans", "--font-size-lg", "--line-height-lg", "--font-size-base", "--line-height-base", "--s-6", "--r-lg", "--s-3"} {
+	for _, k := range []string{"--font-sans", "--font-size-lg", "--line-height-lg", "--font-size-base", "--line-height-base", "--s-6", "--r-lg", "--s-3", "--mute", "--ink"} {
 		if light[k] == "" {
 			t.Fatalf("tokens.css has no %s", k)
 		}
@@ -157,5 +157,39 @@ func TestPageValuesMatchTokens(t *testing.T) {
 		if !strings.Contains(body, want) {
 			t.Errorf("page lacks %q (tokens.css と不一致)", want)
 		}
+	}
+}
+
+// viewport のスクロールバーはガイド §10 の設計（8px・矢印なし・--mute の thumb・hover/active は --ink 35%/65%）で、
+// frontend/src/styles/scrollbar.css と同じ構造・値にする（B1・B2）。値が scrollbar.css とずれたら落ちる。
+func TestPageScrollbarMatchesScrollbarCSS(t *testing.T) {
+	_, body := render(t, "x")
+	b, err := os.ReadFile(filepath.Join("..", "..", "frontend", "src", "styles", "scrollbar.css"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	css := string(b)
+	size := regexp.MustCompile(`::-webkit-scrollbar \{\s*width: (\d+px);\s*height: (\d+px);`).FindStringSubmatch(css)
+	hover := regexp.MustCompile(`thumb:hover[^{]*\{\s*background: color-mix\(in srgb, var\(--ink\) (\d+)%, var\(--mute\)\)`).FindStringSubmatch(css)
+	active := regexp.MustCompile(`thumb:active[^{]*\{\s*background: color-mix\(in srgb, var\(--ink\) (\d+)%, var\(--mute\)\)`).FindStringSubmatch(css)
+	if size == nil || hover == nil || active == nil {
+		t.Fatal("scrollbar.css の寸法・hover・active の宣言が読めない")
+	}
+	for _, want := range []string{
+		"@media (forced-colors:none){",
+		"@supports selector(::-webkit-scrollbar){",
+		"scrollbar-color:var(--mute) transparent",
+		"::-webkit-scrollbar{width:" + size[1] + ";height:" + size[2] + "}",
+		"::-webkit-scrollbar-button{display:none}",
+		"::-webkit-scrollbar-thumb{background:var(--mute);border-radius:999px}",
+		"color-mix(in srgb,var(--ink) " + hover[1] + "%,var(--mute))",
+		"color-mix(in srgb,var(--ink) " + active[1] + "%,var(--mute))",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("page lacks %q (scrollbar.css と不一致)", want)
+		}
+	}
+	if strings.Contains(body, "%!") {
+		t.Errorf("page has a broken format verb: %s", body)
 	}
 }
