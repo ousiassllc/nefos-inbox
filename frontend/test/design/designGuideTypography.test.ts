@@ -99,3 +99,30 @@ describe('行間はスケールの値（T3・T4・#227）', () => {
     },
   )
 })
+
+describe('タブ先頭の題と xs の文字の行間（T4・T8・#436）', () => {
+  test.each([['settings/ai/features/AIUseTab.vue'], ['settings/ai/providers/AIConnectTab.vue']])(
+    '%s のタブ先頭の題 .sh は McpSettings の .heading と同じ base 16（下位の題 sm 14 より大きい）',
+    (file) => {
+      const sh = rule(file, '.sh {')
+      const heading = rule('settings/McpSettings.vue', '.heading {')
+      expect(sh).toContain('font-size: var(--font-size-base)')
+      expect(heading).toContain('font-size: var(--font-size-base)')
+      expect(sh).toContain('font-weight: 600')
+      expect(rule('settings/ai/features/InboxZeroReasons.vue', '.sub {')).toContain(
+        'font-size: var(--font-size-sm)',
+      )
+    },
+  )
+
+  test.each([
+    ['account/AccountItem.vue', '.email {'],
+    ['thread/MessageCard.vue', '.clip {'],
+    ['compose/AttachmentBar.vue', '.attach-tag {'],
+    ['settings/accounts/ColorPicker.vue', '.current {'],
+  ])('xs の文字 %s %s は font-size と対の line-height を持つ', (file, selector) => {
+    const r = rule(file, selector)
+    expect(r).toContain('font-size: var(--font-size-xs)')
+    expect(r).toContain('line-height: var(--line-height-xs)')
+  })
+})
