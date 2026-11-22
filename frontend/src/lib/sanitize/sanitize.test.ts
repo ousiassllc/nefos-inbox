@@ -222,7 +222,15 @@ describe('buildSrcdoc / buildCsp', () => {
     expect(doc).toContain(':root{color-scheme:light}')
     expect(doc).toContain('background:Canvas;color:CanvasText;')
     expect(doc).toContain('font:14px/1.5 sans-serif')
-    expect(doc).toContain('a{color:CanvasText;text-decoration:underline;cursor:pointer}')
+    expect(doc).toMatch(/a\{[^}]*color:inherit[;}]/)
+    expect(doc).toMatch(/a\{[^}]*text-decoration:underline[;}]/)
+  })
+
+  test('リンクの色指定が無ければ本文の色を継ぎ、<a style> のインライン色は srcdoc に残る', () => {
+    const doc = buildSrcdoc(clean('<a href="https://example.com/" style="color:red">x</a>'), {
+      allowImages: false,
+    })
+    expect(doc).toMatch(/<a [^>]*style="[^"]*color:\s*red/)
   })
 })
 
