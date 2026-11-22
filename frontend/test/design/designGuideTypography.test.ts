@@ -60,6 +60,7 @@ describe('行間はスケールの値（T3・T4・#227）', () => {
     ['compose/AttachmentBar.vue', '.attach-hint {', 'xs'],
     ['compose/ComposePane.vue', '.foot-hint {', 'xs'],
     ['settings/ai/ChatGPTAccountRow.vue', '.pick {', 'sm'],
+    ['compose/SenderField.vue', '.sender-email {', 'sm'],
   ])('折り返しうる %s %s は font-size と対の line-height を持つ', (file, selector, size) => {
     const r = rule(file, selector)
     expect(r).toContain(`font-size: var(--font-size-${size})`)
