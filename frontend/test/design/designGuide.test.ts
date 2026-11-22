@@ -5,6 +5,7 @@ import { parse } from '@vue/compiler-sfc'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { h, nextTick } from 'vue'
+import AccountList from '../../src/components/account/AccountList.vue'
 import AlertStack from '../../src/components/shell/AlertStack.vue'
 import BaseButton from '../../src/components/ui/BaseButton.vue'
 import BaseDialog from '../../src/components/ui/BaseDialog.vue'
@@ -245,6 +246,13 @@ describe('モーション（M）', () => {
     expect(w.element.querySelectorAll('.ripple')).toHaveLength(0)
     await w.trigger('pointerdown', { button: 0 })
     expect(w.element.querySelectorAll('.ripple')).toHaveLength(1)
+    w.unmount()
+  })
+
+  test('サイドバーの「アカウントを追加」（.add）は押下でリップルが出る（M4・#409）', async () => {
+    const w = mount(AccountList, { global: { plugins: [createPinia()] }, attachTo: document.body })
+    await w.get('.add').trigger('pointerdown', { clientX: 4, clientY: 4 })
+    expect(w.get('.add').element.querySelectorAll('.ripple')).toHaveLength(1)
     w.unmount()
   })
 })
