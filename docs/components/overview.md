@@ -917,3 +917,4 @@ OAuth（Google）と Sign in with ChatGPT の `127.0.0.1` 待受が返す完了�
 | 2.76 | 2026-11-23 | §5.3 の逸脱表に「エージェントのパネルの初期フォーカス（`AgentPanel` の `.panel:focus`）」を `BaseDialog` の初期フォーカスの行と同じ形式で追記した（コードは変えない。理由は同じ: 開いたときパネル自身へフォーカスを移すだけで操作する要素ではない） | Refs #429 |
 | 2.77 | 2026-11-23 | `AIFeatureRow` の項目名の列（`.flab`）の幅を 148px から、ガイドの範囲（72〜96px）に収まる `--label-col`（96px。`tokens.css`）に直した。`InboxZeroDialog` の確認一覧（`.list`）の先頭行・最終行の `.row` に枠の内側の角丸（`--r-md` − 1px）を付け、ホバーの地が角で枠の外へはみ出ないようにした（`overflow: hidden` はチェックボックスのフォーカスリングを切るので使わない） | Refs #430 |
 | 2.78 | 2026-11-23 | 空状態の文言は `--mute` のため 1 文以内にそろえた。`nav.agent.panelBody` を「エージェントは準備中です。」、`common.list.emptyFailed` を「メールを取得できませんでした。」に縮めた（C6。見た目の変更は文言のみ） | Refs #431 |
+| 2.79 | 2026-11-23 | `ThreadRow` と `DraftRow` の 1 行省略の文字（sm・xs）に、`font-size` と対の `line-height`（`--line-height-sm`・`--line-height-xs`）を付けた。これまでは body の 1.8 を継いでいた（sm は 25.2px）。一覧の行の高さ（`ThreadRow` は 80px・ラベルの行があれば 104px）は変わらない（`lib/inboxItems` の固定値。中身は 80 の内側に収まる） | Refs #432 |
