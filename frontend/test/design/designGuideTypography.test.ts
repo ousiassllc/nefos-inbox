@@ -77,4 +77,25 @@ describe('行間はスケールの値（T3・T4・#227）', () => {
     expect(r).toContain('font-size: var(--font-size-xs)')
     expect(r).toContain('line-height: var(--line-height-xs)')
   })
+
+  test.each([
+    ['inbox/ThreadRow.vue', '.sender {', 'sm'],
+    ['inbox/ThreadRow.vue', '.subject {', 'sm'],
+    ['inbox/ThreadRow.vue', '.snippet {', 'sm'],
+    ['inbox/ThreadRow.vue', '.count {', 'xs'],
+    ['inbox/ThreadRow.vue', '.clip {', 'xs'],
+    ['inbox/ThreadRow.vue', '.date {', 'xs'],
+    ['inbox/ThreadRow.vue', '.reauth {', 'xs'],
+    ['drafts/DraftRow.vue', '.to {', 'sm'],
+    ['drafts/DraftRow.vue', '.subject {', 'sm'],
+    ['drafts/DraftRow.vue', '.snippet {', 'sm'],
+    ['drafts/DraftRow.vue', '.date {', 'xs'],
+  ])(
+    '一覧の行の 1 行省略の文字 %s %s は font-size %s と対の line-height を持つ（#432）',
+    (file, selector, size) => {
+      const r = rule(file, selector)
+      expect(r).toContain(`font-size: var(--font-size-${size})`)
+      expect(r).toContain(`line-height: var(--line-height-${size})`)
+    },
+  )
 })
