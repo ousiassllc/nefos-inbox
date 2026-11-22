@@ -74,7 +74,7 @@ const note = computed(() => {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--s-1);
   min-width: 0;
 }
 

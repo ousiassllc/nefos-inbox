@@ -143,8 +143,8 @@ function fix(provider: string): void {
   align-items: flex-start;
   gap: var(--s-3);
   padding: var(--s-6) var(--s-4);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
+  border: 1px dashed var(--border);
+  border-radius: var(--r-lg);
   line-break: strict;
   word-break: keep-all;
 }
