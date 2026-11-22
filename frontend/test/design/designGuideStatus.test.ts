@@ -13,6 +13,7 @@ import AIDestinationBox from '../../src/components/settings/ai/AIDestinationBox.
 import ChatGPTAccountRow from '../../src/components/settings/ai/ChatGPTAccountRow.vue'
 import BannerStack from '../../src/components/shell/BannerStack.vue'
 import MessageBody from '../../src/components/thread/MessageBody.vue'
+import BaseCheckbox from '../../src/components/ui/BaseCheckbox.vue'
 import { useComposeStore } from '../../src/stores/compose'
 import { useUiStore } from '../../src/stores/ui'
 
@@ -284,9 +285,24 @@ describe('チェックボックス（BaseCheckbox。Inbox Zero の確認一覧�
     expect(style).toContain('height: 18px')
     expect(style).toContain('border-radius: var(--r-sm)')
     expect(style).toMatch(/\.box:checked\s*\{[^}]*background: var\(--accent\)/)
-    expect(style).toMatch(/\.box:checked::after\s*\{[^}]*var\(--bone\)/)
+    expect(style).toMatch(/\.mark\s*\{[^}]*color: var\(--bone\)/)
+    expect(style).not.toContain('::after')
     expect(style).toMatch(/\.box:focus-visible\s*\{[^}]*outline: 3px solid var\(--accent\)/)
     expect(style).toMatch(/\.box:disabled\s*\{[^}]*opacity: 0\.4/)
+  })
+
+  test('チェックは Iconoir の Check（aria-hidden）を <input> の隣に重ね、属性（data-testid）は <input> に付く（I1・#421）', () => {
+    const w = mount(BaseCheckbox, {
+      props: { modelValue: true },
+      attrs: { 'data-testid': 'box' },
+    })
+    const input = w.get('input[type="checkbox"]')
+    expect(input.attributes('data-testid')).toBe('box')
+    expect(w.element.hasAttribute('data-testid')).toBe(false)
+    const mark = w.get('svg.icon-sm')
+    expect(mark.attributes('aria-hidden')).toBe('true')
+    expect(input.element.nextElementSibling).toBe(mark.element)
+    w.unmount()
   })
 })
 
