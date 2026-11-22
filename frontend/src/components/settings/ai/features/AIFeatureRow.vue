@@ -176,7 +176,7 @@ function saveManual(provider: string): void {
   display: flex;
   flex: none;
   align-items: center;
-  width: 148px;
+  width: var(--label-col);
   min-height: var(--control-h);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-sm);

@@ -149,6 +149,18 @@ function onReviewOpen(open: boolean): void {
   cursor: pointer;
 }
 
+.list > li:first-child .row {
+  border-radius: calc(var(--r-md) - 1px) calc(var(--r-md) - 1px) 0 0;
+}
+
+.list > li:last-child .row {
+  border-radius: 0 0 calc(var(--r-md) - 1px) calc(var(--r-md) - 1px);
+}
+
+.list > li:only-child .row {
+  border-radius: calc(var(--r-md) - 1px);
+}
+
 .row:hover {
   background: var(--accent-soft);
 }
