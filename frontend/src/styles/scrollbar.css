@@ -5,44 +5,54 @@
  * カスタムは @media (forced-colors: none) の中だけ。Windows ハイコントラスト（forced-colors: active）では OS の配色に任せる。
  * Android（html[data-touch-ui]）は OS の重ねて出るスクロールバーをそのまま使うので、ここでも何も指定しない（:root:not([data-touch-ui]) の中だけ）。
  * 優先関係: Chromium 121+ は scrollbar-width / scrollbar-color が auto 以外だと ::-webkit-scrollbar を無視する。
- *   そこで標準の 2 プロパティを * に置き（scrollbar-width は継承されないので、:root だけだと viewport にしか効かない。Firefox 向け）、
+ *   そこで標準の 2 プロパティを * に置き（scrollbar-width は継承されないので、子孫には * が要る。Firefox 向け）。
+ *   viewport のバーは :root（html）の指定で決まるので、:root 自身も同じセレクタに並べる（#412）。
  *   ::-webkit-scrollbar に対応するエンジン（WebView2 など）では @supports の中で auto に戻し、擬似要素で描く。
  */
 @media (forced-colors: none) {
+  :root:not([data-touch-ui]),
   :root:not([data-touch-ui]) * {
     scrollbar-width: thin;
     scrollbar-color: var(--mute) transparent;
   }
 
   @supports selector(::-webkit-scrollbar) {
+    :root:not([data-touch-ui]),
     :root:not([data-touch-ui]) * {
       scrollbar-width: auto;
       scrollbar-color: auto;
     }
 
+    :root:not([data-touch-ui])::-webkit-scrollbar,
     :root:not([data-touch-ui]) ::-webkit-scrollbar {
       width: 8px;
       height: 8px;
     }
 
+    :root:not([data-touch-ui])::-webkit-scrollbar-track,
     :root:not([data-touch-ui]) ::-webkit-scrollbar-track,
+    :root:not([data-touch-ui])::-webkit-scrollbar-corner,
     :root:not([data-touch-ui]) ::-webkit-scrollbar-corner {
       background: transparent;
     }
 
+    :root:not([data-touch-ui])::-webkit-scrollbar-button,
     :root:not([data-touch-ui]) ::-webkit-scrollbar-button {
       display: none;
     }
 
+    :root:not([data-touch-ui])::-webkit-scrollbar-thumb,
     :root:not([data-touch-ui]) ::-webkit-scrollbar-thumb {
       background: var(--mute);
       border-radius: 999px;
     }
 
+    :root:not([data-touch-ui])::-webkit-scrollbar-thumb:hover,
     :root:not([data-touch-ui]) ::-webkit-scrollbar-thumb:hover {
       background: color-mix(in srgb, var(--ink) 35%, var(--mute));
     }
 
+    :root:not([data-touch-ui])::-webkit-scrollbar-thumb:active,
     :root:not([data-touch-ui]) ::-webkit-scrollbar-thumb:active {
       background: color-mix(in srgb, var(--ink) 65%, var(--mute));
     }

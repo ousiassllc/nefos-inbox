@@ -17,6 +17,8 @@ function block(source: string, opener: RegExp): string {
   throw new Error(`閉じていない: ${opener}`)
 }
 
+const escapeRe = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
 const TOUCH_GUARD = ':root:not([data-touch-ui]) '
 const forcedColorsNone = block(css, /@media\s*\(forced-colors:\s*none\)\s*\{/)
 const supportsWithGuard = block(
@@ -24,9 +26,13 @@ const supportsWithGuard = block(
   /@supports\s+selector\(::-webkit-scrollbar\)\s*\{/,
 )
 const outsideSupportsWithGuard = forcedColorsNone.replace(supportsWithGuard, '')
-// 詳細は :root:not([data-touch-ui]) を外して見る（外す前の形は「タッチ UI に指定しない」のテストが確かめる）
-const supports = supportsWithGuard.replaceAll(TOUCH_GUARD, '')
-const outsideSupports = outsideSupportsWithGuard.replaceAll(TOUCH_GUARD, '')
+// 詳細は :root:not([data-touch-ui]) を外して見る（外す前の形は「タッチ UI に指定しない」のテストが確かめる）。
+// :root 自身を指す項（`:root:not([data-touch-ui])` と `:root:not([data-touch-ui])::-webkit-scrollbar…`）は先に除き、子孫の項だけ残す（#412）
+const ROOT_SELF_ITEM = /:root:not\(\[data-touch-ui\]\)(::[\w-]+(:[\w-]+)?)?\s*,\s*/g
+const withoutGuard = (source: string) =>
+  source.replace(ROOT_SELF_ITEM, '').replaceAll(TOUCH_GUARD, '')
+const supports = withoutGuard(supportsWithGuard)
+const outsideSupports = withoutGuard(outsideSupportsWithGuard)
 
 describe('scrollbar.css', () => {
   test('カスタムはすべて @media (forced-colors: none) の中に置く（ハイコントラストでは OS の配色に任せる）', () => {
@@ -40,6 +46,35 @@ describe('scrollbar.css', () => {
 
   test('* に細いスクロールバーを指定する（scrollbar-width は継承されないので :root だけでは非ルートの領域に効かない）。Android のタッチ UI は除く', () => {
     expect(outsideSupports).toMatch(/\*\s*\{[^}]*scrollbar-width:\s*thin;/)
+  })
+
+  test('viewport（:root 自身＝html）にも同じ指定を当てる（バーの設計は html の指定で決まる。#412）', () => {
+    const root = ':root:not([data-touch-ui])'
+    // 標準の 2 プロパティ（forced-colors の直下・@supports の中）は :root 自身と子孫（*）を並べる
+    expect(outsideSupportsWithGuard).toMatch(
+      new RegExp(
+        `${escapeRe(root)},\\s*${escapeRe(root)} \\*\\s*\\{[^}]*scrollbar-width:\\s*thin;`,
+      ),
+    )
+    expect(supportsWithGuard).toMatch(
+      new RegExp(
+        `${escapeRe(root)},\\s*${escapeRe(root)} \\*\\s*\\{[^}]*scrollbar-width:\\s*auto;`,
+      ),
+    )
+    // 擬似要素は :root 自身（空白なし）と子孫（空白あり）の両方。子孫だけだと html のバーに当たらない
+    const pseudos = [
+      '::-webkit-scrollbar',
+      '::-webkit-scrollbar-track',
+      '::-webkit-scrollbar-corner',
+      '::-webkit-scrollbar-button',
+      '::-webkit-scrollbar-thumb',
+      '::-webkit-scrollbar-thumb:hover',
+      '::-webkit-scrollbar-thumb:active',
+    ]
+    for (const p of pseudos) {
+      expect(supportsWithGuard).toMatch(new RegExp(`${escapeRe(root + p)}\\s*[,{]`))
+      expect(supportsWithGuard).toMatch(new RegExp(`${escapeRe(`${root} ${p}`)}\\s*[,{]`))
+    }
   })
 
   test('Android のタッチ UI（html[data-touch-ui]）には何も指定しない（OS の重ねて出るスクロールバーを使う。#378）', () => {
