@@ -222,6 +222,6 @@ function onKeydown(ev: KeyboardEvent): void {
   gap: var(--s-2);
   padding: var(--s-3);
   color: var(--mute);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-sm); line-height: var(--line-height-sm);
 }
 </style>

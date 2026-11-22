@@ -88,6 +88,7 @@ watch(model, () => void nextTick(fit))
 .question-label {
   color: var(--mute);
   font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
 }
 
 .question-input {

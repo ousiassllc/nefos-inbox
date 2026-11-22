@@ -62,6 +62,7 @@ const id = useId()
 
 .field-label {
   font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
 }
 
 .field-input {

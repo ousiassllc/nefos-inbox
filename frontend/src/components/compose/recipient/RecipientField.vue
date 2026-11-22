@@ -198,7 +198,7 @@ function onKeydown(e: KeyboardEvent): void {
   flex: 0 0 var(--compose-label-w);
   padding-top: var(--s-2);
   color: var(--mute);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-sm); line-height: var(--line-height-sm);
 }
 
 .recipient-box {

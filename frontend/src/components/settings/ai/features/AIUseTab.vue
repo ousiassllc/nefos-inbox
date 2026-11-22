@@ -163,6 +163,7 @@ function fix(provider: string): void {
   align-items: center;
   gap: var(--s-2);
   font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
 }
 
 /* 390px 幅: 行はそれぞれ枠のあるカードにし、一覧の外枠は外す。 */
