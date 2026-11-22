@@ -78,6 +78,8 @@
   --menu-pad-x: var(--s-3);
   /* 作成画面の項目ラベル列（宛先・差出人・件名）の幅 */
   --compose-label-w: 56px;
+  /* 設定の「機能ごとに使う AI」の項目名（AIFeatureRow の .flab）の幅。ガイドの --label-col（72〜96px） */
+  --label-col: 96px;
 
   /* 影はモーダルだけ。カード・パネル・ポップアップは 1px solid var(--border) で区切る */
   --shadow-modal: 0 1px 2px rgb(0 0 0 / 6%);
