@@ -45,9 +45,10 @@ function onReviewOpen(open: boolean): void {
     :open="consentOpen"
     size="sm"
     :title="t.consentTitle(dest?.providerLabel ?? '')"
-    :description="t.consentDescription(dest?.providerLabel ?? '', dest?.url ?? '')"
+    :body-label="t.consentTitle(dest?.providerLabel ?? '')"
     @update:open="onConsentOpen"
   >
+    <p class="body" data-testid="inbox-zero-consent-body">{{ t.consentDescription(dest?.providerLabel ?? '', dest?.url ?? '') }}</p>
     <template #footer>
       <BaseButton data-testid="inbox-zero-consent-cancel" @click="zero.cancel()">{{ common.cancel }}</BaseButton>
       <BaseButton variant="primary" data-testid="inbox-zero-consent-agree" @click="zero.agree()">{{ t.consentAgree }}</BaseButton>
@@ -71,10 +72,10 @@ function onReviewOpen(open: boolean): void {
     size="md"
     :eyebrow="t.dialogEyebrow"
     :title="t.dialogTitle"
-    :description="t.dialogDescription"
     stack-footer
     @update:open="onReviewOpen"
   >
+    <p class="body">{{ t.dialogDescription }}</p>
     <p class="count" data-testid="inbox-zero-count" aria-live="polite">
       {{ t.selected(count, zero.candidates.length) }}<template v-if="zero.skipped > 0">　{{ t.skipped(zero.skipped) }}</template>
     </p>
@@ -103,6 +104,16 @@ function onReviewOpen(open: boolean): void {
 </template>
 
 <style scoped>
+.body {
+  margin: 0 0 var(--s-3);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+}
+
+.body:last-child {
+  margin-bottom: 0;
+}
+
 .checking {
   display: flex;
   align-items: center;
