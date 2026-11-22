@@ -13,7 +13,7 @@ export const inboxZero = {
   checking: '不要なメールを探しています…',
   checkingTitle: 'Inbox Zero：判断中',
   abort: 'やめる',
-  none: (n: number) => `不要なメールは見つかりませんでした（${n} 件を確認）。`,
+  none: '不要なメールは見つかりませんでした。',
   dialogEyebrow: 'Inbox Zero',
   dialogTitle: 'アーカイブする候補',
   dialogDescription: '不要と思われるメールです。残したいものはチェックを外してください。',

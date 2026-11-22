@@ -158,7 +158,7 @@ export const useInboxZeroStore = defineStore('inboxZero', () => {
       const found = list(res.candidates)
       if (found.length === 0) {
         reset()
-        ui.pushToast('info', msg.none(res.examined))
+        ui.pushToast('info', msg.none)
         return
       }
       candidates.value = found

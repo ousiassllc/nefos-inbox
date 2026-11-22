@@ -161,7 +161,7 @@ describe('Inbox Zero: 判断と確認の一覧', () => {
     aiCtl.find = { candidates: [], examined: 3, skipped: 0 }
     await zero.start()
     expect(zero.phase).toBe('idle')
-    expect(ui.toast?.message).toContain('見つかりませんでした')
+    expect(ui.toast?.message).toBe('不要なメールは見つかりませんでした。')
   })
 
   test('一覧は最初は全部チェック済み。チェックを外したものはアーカイブされず残り、Yes のあとは件数と「元に戻す」が出る', async () => {

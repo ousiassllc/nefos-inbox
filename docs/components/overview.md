@@ -899,3 +899,4 @@ OAuth（Google）と Sign in with ChatGPT の `127.0.0.1` 待受が返す完了�
 | 2.61 | 2026-11-23 | `AIUseTab` の「使える AI がありません」の空状態を、独自の div から共通の `EmptyState`（`action` スロットに「AI をつなぐ」）に置き換えた。`.use` の間隔を `--gap-field`（16）にし、見出し→一覧は 12 のまま `.block` で包んだ | Refs #414 |
 | 2.62 | 2026-11-23 | 折り返しうる sm の文章 3 か所（`AIFeatureRow` の `.fmsg`・`InboxZeroReasons` と `AIConnectTab` の `.error`）に `line-height: var(--line-height-sm)` を足した | Refs #415 |
 | 2.63 | 2026-11-23 | Inbox Zero の「判断中」ダイアログ（`InboxZeroDialog` の checking）の `BaseDialog` に `body-label`（「Inbox Zero：判断中」）を足し、本文に領域名と `tabindex=0` が付くようにした（同意ダイアログ・`AddAccountDialog` の認可待ちと同じ） | Refs #416 |
+| 2.64 | 2026-11-23 | Inbox Zero で候補が 0 件のときのトーストを「不要なメールは見つかりませんでした。」の 1 文にし、「（N 件を確認）」を削った（O3: トーストは 1 行の短文。狭幅で省略記号に切れていた）。`InboxZeroResult.examined` は API に残るが、この表示には使わない | Refs #418 |
