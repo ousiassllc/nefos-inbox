@@ -59,6 +59,7 @@ function onReviewOpen(open: boolean): void {
     :open="checkingOpen"
     size="sm"
     :title="t.checkingTitle"
+    :body-label="t.checkingTitle"
     @update:open="onCheckingOpen"
   >
     <p class="checking" data-testid="inbox-zero-checking"><Spinner /> {{ t.checking }}</p>
