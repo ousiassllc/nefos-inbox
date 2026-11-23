@@ -151,7 +151,7 @@ flowchart LR
 | ファイル名 | `nefos-inbox-vX.Y.Z-windows-amd64-setup.exe`（`NOTICE` と `SHA256SUMS.txt` を同じ Release に添付） |
 | 権限・場所 | 利用者ごと（`RequestExecutionLevel user`）。既定 `%LOCALAPPDATA%\Programs\Nefos Inbox`（v0.1.46 までは `...\Programs\Hitomado`。上書き更新で替わる。下の「旧名の掃除」）。UAC は出ない |
 | ショートカット | スタートメニュー（必須）。デスクトップは任意（インストーラーのコンポーネント選択。既定はオフ、サイレントでも作らない）。ファイル名は製品の表示名の `Nefos Inbox.lnk`（表示名に揃える） |
-| タスクバーのアイコン | インストール・アンインストールの最後に `SHChangeNotify(SHCNE_ASSOCCHANGED)` でシェルのアイコンキャッシュの更新を促す（NSIS）。アプリは、メインウィンドウが表示されるたびに exe のアイコンリソース（ID 3）から `ICON_BIG`・`ICON_SMALL` を設定し直す（`internal/platform/windowicon_windows.go`）ので、上書き更新後に古いアイコンが残りにくい。ショートカット・プロセスへの AppUserModelID の付与は、通知（AppUserModelID `Nefos Inbox`）やピン留めとの関係を変えうるため行わない（#391） |
+| タスクバーのアイコン | インストール・アンインストールの最後に `SHChangeNotify(SHCNE_ASSOCCHANGED)` でシェルのアイコンキャッシュの更新を促す（NSIS）。アプリは、メインウィンドウが表示されるたびに exe のアイコンリソース（ID 3）から `ICON_BIG`・`ICON_SMALL` を設定し直す（`internal/platform/windowicon_windows.go`）ので、上書き更新後に古いアイコンが残りにくい。ショートカット・プロセスへの AppUserModelID の付与は行わない（既存のピン留めを書き換えられず、付けると二重のボタンになる恐れが実機なしでは潰せないため。根拠と再検討の条件は [§4.3.2](#432-タスクバーのアイコンと-appusermodelid391)。#391）。実機での確認手順は [windows-verification.md の H](windows-verification.md#h-タスクバーのアイコンと-appusermodelid391) |
 | 「アプリと機能」 | `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\jp.ousias.hitomado`（表示名・版・発行元・`InstallLocation`・`UninstallString`）。このキー名を変えると別アプリ扱いになり、上書き更新できなくなる |
 | 上書き更新 | 新しい版のインストーラーを実行するだけ。前回の `InstallLocation` に入り、exe と登録内容を置き換える。起動中の `nefos-inbox.exe` は置き換えられないため（実行中の exe を書き込みで開けるかで判定）、画面ありなら終了を促して再試行させ、サイレント（`/S`）なら何も変えずエラーコード 5 を設定して中止する（CI で終了コード 5 を確認。ウイルス対策ソフトが exe を一時的に掴んでいる間も同じ扱いになるため、少し待って再実行する）。自動アップデート（NF-D03）は同じインストーラーをサイレントで使う: `/S`（サイレント）・`/WAIT=秒`（サイレント実行のとき、起動中の `nefos-inbox.exe` の終了を最大その秒数〔上限 300〕待ってから上書きする。省略時は待たずに終了コード 5。CI の `test-installer.ps1` が両方を確かめる）・`/RELAUNCH`（成功後にインストール先の `nefos-inbox.exe` を起動する。`.onInstSuccess`）・`/D=パス`（最後の引数・引用符なし）。アプリは終了処理の最後にインストーラーを分離した子プロセスで起動してから終了する（[overview §5.1](../architecture/overview.md#51-自動アップデートwindows-版nf-d03)） |
 | 旧名の掃除（表示名の変更、#399） | 製品の表示名は「Nefos Inbox」。「アプリと機能」のキー名（`jp.ousias.hitomado`）は変えない（変えると別アプリ扱いになり、上書き更新できなくなる）。exe 名・インストール先・データ・資格情報の名前の変更は、下の「旧名の掃除（内部名の変更、#402）」で扱う。表示名を変える前の版に上書きインストールすると、インストーラーが旧名の `HKCU\Software\Classes\AppUserModelId\Hitomado`（通知の登録。新しい登録 `...\AppUserModelId\Nefos Inbox` はアプリが起動時に作る）とスタートメニューの `Hitomado.lnk` を消す。旧名の `Hitomado.lnk` がデスクトップにあったときだけ、デスクトップに `Nefos Inbox.lnk` を作り直す（無かったときは作らない） |
@@ -208,6 +208,51 @@ CI では確かめられない項目（実アプリが起動中の上書き拒�
 - 失敗: どの段階で失敗しても旧い保存先は消さず、新しい保存先に半端な中身を残さず（作業用フォルダは片づける）、起動はエラーで止まる。原因が消えた次の起動でやり直す。
 - 資格情報: 新しい名前（Windows はサービス名 `Nefos Inbox`、キー `nefos-inbox/<種別>/<ID>`）に無いとき、旧い名前（`Hitomado`、`hitomado/<種別>/<ID>`）を読み、新しい名前へ書き写して、読み戻して一致を確かめてから旧い項目を消す（`secrets.WithLegacy`）。書き写しに失敗したら旧い項目を消さず、読めた値をそのまま使い、次の読み出しでやり直す。Android は保存先（`hitomado_secrets`）と Keystore の鍵の別名は変えず、キー名の接頭辞だけを同じ保存先の中で移す。再ログインは要らない。
 - 確認: `internal/datamigrate`（成功・新しい保存先が既にある・古い保存先が無い・名前変更の失敗〔写しに切り替わる〕・コピー失敗で古いデータが残る・やり直し）と `internal/secrets`（旧名の項目の移行・新しい値の優先・書き写し失敗で旧い値が残る・削除が両方に効く）の単体テスト。
+
+#### 4.3.2 タスクバーのアイコンと AppUserModelID（#391）
+
+上書き更新のあとに古い「W」のアイコンがタスクバーに残る件で、AppUserModelID（以下 AUMID）をプロセスとショートカットに付けるかを、2026-11-23 に一次資料（下の「出典」。取得日 2026-11-23）と Wails v3.1.0・go-toast v2.0.3 のソースで確かめ直した。**結論は「付けない」（#393 の判断を維持）。** 入れたのは、ウィンドウへの `ICON_BIG`・`ICON_SMALL` の設定（`internal/platform/windowicon_windows.go`）と、インストール・アンインストールの最後の `SHChangeNotify`（`build/windows/nsis/project.nsi`）。
+
+**今の状態（ソースで確認）**
+
+- Wails v3.1.0 は、プロセスに AUMID を設定しない（`SetCurrentProcessExplicitAppUserModelID` の呼び出しが `pkg/` に無い）。ウィンドウにもプロパティを付けない。通知サービスは `application.Options.Name`（`Nefos Inbox`）をそのまま AUMID にして、`HKCU\Software\Classes\AppUserModelId\Nefos Inbox` に `DisplayName`・`CustomActivator`・`IconUri` を書き、`CreateToastNotifierWithId("Nefos Inbox")` で送る（`pkg/services/notifications/notifications_windows.go`、`wintoast/registry.go`・`bind_windows.go`）。通知はレジストリ登録だけで動き、ショートカットは使わない。
+- したがって今は「プロセスもショートカットも明示 AUMID なし」（下の表の (iii)）。タスクバーは、AUMID を exe やショートカットから自分で決める（Microsoft の言う「システムが付ける内部 AUMID」。アプリからは読めない）。
+- インストーラー（NSIS）が作るスタートメニュー・デスクトップのショートカットにも AUMID は無い。
+
+**組み合わせごとの扱い**
+
+| | プロセス | ショートカット（スタートメニュー・デスクトップ・ピン留め） | Microsoft の資料での扱い |
+|---|---|---|---|
+| (i) | 明示 AUMID あり | 無い（今の版でピン留め・作成済みのもの） | 資料は「明示 AUMID を使うなら、実行中のウィンドウ・プロセス、ショートカット、ファイルの関連付けのすべてに同じ値を付ける」と要求する。(i) はこれを満たさない。ピン留めのボタンと実行中のウィンドウが別のボタンになる恐れが大きい［推測。資料は (i) の結果を明記していない。実機では未確認］ |
+| (ii) | 明示 AUMID あり | 同じ値あり | 資料が定める形。同じボタンにまとまる。ショートカットの AUMID は「ショートカットを作るときに付ける」とされ、スタートメニュー・デスクトップなど複数あれば全部に同じ値を付ける |
+| (iii) | 無い | 無い（今の状態） | 資料が許す形（AUMID は任意で、システムが推定する）。ただし「明示 AUMID だけが正確なふるまいを保証する」とも書かれている |
+
+**付けない理由**
+
+1. (ii) にするには、プロセス・スタートメニュー／デスクトップのショートカット・**既にユーザーがピン留めしているショートカット**の 3 つに同じ AUMID が要る。ピン留めは利用者の持ち物（`%APPDATA%\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar` の `.lnk` と、シェルが持つ並び順の情報）で、Microsoft は「プログラムからのピン留めは許されない」とする（Taskbar Extensions）。インストーラーが書き換えるのは公式な手段ではなく、並びや状態を壊す恐れがある。書き換えないと、更新した全員のピン留めが (i) になり、ボタンが 2 つに割れる。割れ方はピン留めしている人ほど重い。
+2. 明示 AUMID は、プロセス側も「UI を出す前の起動処理」（Wails の起動前）で呼ぶ必要がある。Wails の `application.New` の前に呼ぶことになるが、Windows 実機で二重ボタンが出ないことを確かめられない（タスクバーのボタンの出方を CI で検査する手段が無い）。確かめられない変更を、全利用者の自動アップデートで配ることになる。
+3. NSIS には、ショートカットへ `System.AppUserModel.ID` を付ける標準の機能が無い（IShellLink／IPropertyStore の COM 呼び出しを `System` プラグインで書くか、サードパーティのプラグインが要る。このリポジトリのビルド環境で使えるかは、Linux ホストでは確かめられなかった）。実機で試せない COM 呼び出しの手書きは、誤りに気づけない。
+4. AUMID の形は、Microsoft では「128 文字以内・空白なし・`会社名.製品名`」。Wails が通知用に登録する名前は表示名と同じ `Nefos Inbox`（空白あり）で、`application.Options.Name` を変えないと変わらない。プロセスの AUMID を通知の AUMID とそろえるには、表示名（ウィンドウ・トレイ・About の表示にも使う）と別の値にできず、別の値にすると通知とタスクバーの AUMID が分かれる。表示名の変更は #399・#402 で登録の掃除まで要した重い作業だった。
+5. 症状（ピン留めしていないタスクバーのボタンが古い「W」）の原因は、Explorer のアイコンのキャッシュと推測されている（悠太さんの PC の中は未確認）。実行時の `ICON_BIG`・`ICON_SMALL` とキャッシュ更新の通知は、この推測に沿う安全な手当てで、(iii) のまま効く。明示 AUMID が効くかどうかは、資料からは分からない。
+
+同じ結論を、別のプロジェクトも出している（第三者の資料。一次資料ではない）: Elyra の RFC 0030 は、プロセスに明示 AUMID を付けると、AUMID の無いスタートメニューのショートカットからのピン留めが実行中のボタンと別になる、として付けない。
+
+**通知の `IconUri` を、一時 PNG ではなくインストールした exe に向ける件（変更しない）**
+
+- Wails の通知サービスは、`IconUri` を `%TEMP%\Nefos Inbox<GUID>.png` に固定している（`Options` に設定項目が無い）。通知を送るたびに、exe のアイコンリソース（ID 3）から書き直すので、PNG は常に今の exe のアイコン。古い「W」が通知に残る経路ではない。
+- レジストリへの書き込み（go-toast の `writeStringValue`）は、同じ名前の値が既にあれば上書きしない。`IconUri` は、通知サービスの起動時（`Startup`）に最初に書いたパス（同じ名前の PNG）のまま変わらない。
+- アプリが起動後にレジストリの `IconUri` を exe のパスへ書き換える案は、「`IconUri` が exe（`.exe,0` 形式）を受け付ける」ことを Microsoft の資料で確かめられなかった（資料にあるのは画像ファイル）。確かめられない書き換えは、通知の見た目を壊す恐れがあるので入れない。
+
+**再検討の条件**: 次をすべて満たせるときに、プロセスとショートカットの AUMID を入れる。(1) Windows 実機で、旧版（AUMID なし）のピン留め・スタートメニューのショートカットがある状態から上書き更新して、ボタンが 1 つにまとまることを確かめられる。(2) 既存のピン留めへの対処（利用者に付け直しを案内する、など）を決める。(3) ショートカットへの AUMID の付け方（NSIS の `System` プラグインの COM 呼び出し、または検証済みのプラグイン）を実機の CI で確かめられる。確かめる手順は [windows-verification.md の H](windows-verification.md#h-タスクバーのアイコンと-appusermodelid391) に書いた。
+
+**出典（取得日 2026-11-23）**
+
+- [Application User Model IDs (AppUserModelIDs)](https://learn.microsoft.com/en-us/windows/win32/shell/appids)（AUMID が任意であること、明示するなら実行中のウィンドウ・プロセス・ショートカットのすべてに同じ値を付けること、ショートカットへは作成時に `System.AppUserModel.ID` を付けること、ID の形）
+- [SetCurrentProcessExplicitAppUserModelID](https://learn.microsoft.com/en-us/windows/win32/api/shobjidl_core/nf-shobjidl_core-setcurrentprocessexplicitappusermodelid)（UI を出す前に呼ぶこと）
+- [System.AppUserModel.ID](https://learn.microsoft.com/en-us/windows/win32/properties/props-system-appusermodel-id)（設定すると、タスクバーが該当のウィンドウ・ショートカットの情報を更新すること）
+- [Taskbar Extensions](https://learn.microsoft.com/en-us/windows/win32/shell/taskbar-extensions)（グループは AUMID ごと。ピン留めはユーザーだけが行い、プログラムからのピン留めは許されない）
+- [How to enable desktop toast notifications through an AppUserModelID](https://learn.microsoft.com/en-us/windows/win32/shell/enable-desktop-toast-with-appusermodelid)（インストーラーでショートカットへ AUMID を付ける方法。Windows 8 時代の資料で、Wails が使うレジストリ方式の `IconUri` には触れていない）
+- [Elyra RFC 0030](https://elyracode.com/docs/framework/0030-windows-app-identity)（第三者。同じ判断の例）
 
 ### 4.4 macOS の `.app`（試験版）
 
@@ -360,3 +405,4 @@ pre-push:
 | 1.20 | 2026-11-14 | §4.4 のアイコンの行を、`wails3 generate icons` で作る方式から、ロゴ v5c の素材（`appicon.png`・`icon.ico`・`icons.icns`・`icons.iconset/`）をコミットする方式に変更 | #379 |
 | 1.21 | 2026-11-18 | 製品の表示名を Hitomado から Nefos Inbox に変更（#399）。リポジトリ名・ファイル名・データの保存先・資格情報の名前は変えない | #399 |
 | 1.22 | 2026-11-19 | 内部の名前を `nefos-inbox`、フォルダ名を `Nefos Inbox` にそろえた（#402）。§4.3 に、exe・インストール先・旧名の掃除と、配布ファイル名の互換（旧名の添付も付ける）を追記し、§4.3.1 に、データ・資格情報の引っ越しを追加。リポジトリの GitHub 上のリネームは別に行う | #402 |
+| 1.23 | 2026-11-23 | §4.3.2 を追加。#391 の AppUserModelID を付けない判断を、Microsoft の資料と Wails v3.1.0・go-toast のソースで確かめ直して記録（組み合わせごとの扱い・付けない理由・通知の `IconUri` を変えない理由・再検討の条件・出典）。§4.3 の表から参照し、実機の確認手順を windows-verification.md の H に追加 | #391 |

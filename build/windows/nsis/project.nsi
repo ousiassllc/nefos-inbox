@@ -192,7 +192,7 @@ FunctionEnd
 
 # シェル（Explorer）にアイコンの変更を知らせ、アイコンのキャッシュを更新させる（SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST)）。
 # 上書き更新やアンインストールのあとにタスクバー・スタートメニューへ古いアイコンが残るのを減らす（#391）。
-# ショートカットへ AppUserModelID を付けるには NSIS 標準に機能が無く（サードパーティのプラグインが要る）、アプリ側も付けないので扱わない。
+# ショートカットへ AppUserModelID を付けない理由は docs/environment/setup.md §4.3.2（NSIS 標準に機能が無いこと、プロセスと既存のピン留めに同じ値を付けられず二重のボタンになる恐れがあること）。
 !macro NOTIFY_SHELL_ICON_CHANGED
     System::Call 'shell32::SHChangeNotify(i 0x08000000, i 0x2000, p 0, p 0)'
 !macroend
