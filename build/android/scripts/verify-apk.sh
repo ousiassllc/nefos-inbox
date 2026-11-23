@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 作った APK の中身を検査する（android:verify）。CI でも同じものを使う。
 # 使い方: verify-apk.sh <apk> <applicationId> <X.Y.Z> [<SDK のパス>]
-# 検査: packageName・versionName・versionCode・targetSdk・権限（許可リスト）・allowBackup=false・extractNativeLibs=true・.so／dex の圧縮・libwails.so の 16KB 整列・署名。
+# 検査: packageName・versionName・versionCode・targetSdk・権限（許可リスト）・BROWSABLE の intent-filter・allowBackup=false・extractNativeLibs=true・.so／dex の圧縮・libwails.so の 16KB 整列・署名。
 # 署名の種類（デバッグ鍵か）は表示する。EXPECT_SIGNING=debug|release を付けると、その種類でなければ失敗にする。
 set -euo pipefail
 
@@ -60,6 +60,11 @@ check "no WailsForegroundService (foreground service is not used)" bash -c '! gr
 check "allowBackup=false" grep -Eq ':allowBackup\(0x[0-9a-f]+\)=false$' <<<"$manifest"
 check "dataExtractionRules is set" grep -Eq ':dataExtractionRules\(0x[0-9a-f]+\)=@' <<<"$manifest"
 check "not debuggable" bash -c '! grep -q ":debuggable(" <<<"$1"' _ "$manifest"
+# ブラウザの認可の完了ページの「Nefos Inbox に戻る」リンク（#368。docs/environment/android.md §14.2）が使う、BROWSABLE の intent-filter は 1 つだけで、
+# scheme・host が jp.ousias.hitomado://auth-return であること（Go の callbackpage.AndroidReturnURL と同じ値）。ほかの入口をブラウザから開けるようにしない（ライブラリがマージで BROWSABLE を足したら失敗する）。
+check "exactly one BROWSABLE intent-filter" test "$(grep -c 'android.intent.category.BROWSABLE"' <<<"$manifest")" = 1
+check "BROWSABLE intent-filter scheme is jp.ousias.hitomado" grep -Eq ':scheme\(0x[0-9a-f]+\)="jp\.ousias\.hitomado"' <<<"$manifest"
+check "BROWSABLE intent-filter host is auth-return" grep -Eq ':host\(0x[0-9a-f]+\)="auth-return"' <<<"$manifest"
 # .so・dex は圧縮して格納する（docs/environment/android.md §6.1）。extractNativeLibs=true（端末上で .so を展開する）が manifest に出ること、
 # libwails.so と classes.dex が Deflate で入っていること。無圧縮に戻ると APK が約 46MB になる。
 check "extractNativeLibs=true" grep -Eq ':extractNativeLibs\(0x[0-9a-f]+\)=true$' <<<"$manifest"
