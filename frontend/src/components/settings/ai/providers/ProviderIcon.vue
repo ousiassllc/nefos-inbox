@@ -43,12 +43,12 @@ const initial = computed(() => TILES[props.id])
   justify-content: center;
   width: 32px;
   height: 32px;
-  border-radius: 6px;
+  border-radius: var(--r-md);
   background: var(--accent-soft);
   color: var(--ink);
   font-family: var(--font-sans);
   font-weight: 600;
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
   line-height: 1;
 }
 .logo,
