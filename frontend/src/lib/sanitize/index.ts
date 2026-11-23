@@ -137,10 +137,11 @@ export function buildCsp(allowImages: boolean): string {
   return `default-src 'none'; img-src ${img}; style-src 'unsafe-inline'`
 }
 
-// iframe 内の基本スタイル。色はシステム色（Canvas/CanvasText）で、メール本文が上書きできる。
+// iframe 内の基本スタイル。色はシステム色（Canvas/CanvasText）で、メール本文が上書きできる。リンクは本文の文字色を継ぐ。
 const BASE_STYLE =
   ':root{color-scheme:light}html{height:auto}body{margin:0;padding:0;background:Canvas;color:CanvasText;' +
-  'font:14px/1.5 sans-serif;overflow-wrap:anywhere}img{max-width:100%;height:auto}a{cursor:pointer}'
+  'font:14px/1.5 sans-serif;overflow-wrap:anywhere}img{max-width:100%;height:auto}' +
+  'a{color:inherit;text-decoration:underline;cursor:pointer}'
 
 /** サニタイズ済み HTML を sandbox iframe の srcdoc 用の完全な文書にする。CSP の meta を先頭に置く。 */
 export function buildSrcdoc(sanitizedHtml: string, opts: { allowImages: boolean }): string {

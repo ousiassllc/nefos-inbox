@@ -113,12 +113,12 @@ export const useInboxZeroStore = defineStore('inboxZero', () => {
     requestId = undefined
   }
 
-  /** ボタン。押せないときは理由をトーストで出す（タッチ UI はツールチップが出ないため）。 */
+  /** ボタン。押せないときは理由を出す（タッチ UI はツールチップが出ないため）。複数文の案内は 1 行のトーストに収まらないので、インラインアラート（ガイド O3）。 */
   async function start(): Promise<void> {
     if (phase.value !== 'idle') return
     const blocked = blockedReason.value
     if (blocked) {
-      ui.pushToast('info', blocked)
+      ui.pushNotice(blocked, 'info')
       return
     }
     const target = consentTarget.value
@@ -158,7 +158,7 @@ export const useInboxZeroStore = defineStore('inboxZero', () => {
       const found = list(res.candidates)
       if (found.length === 0) {
         reset()
-        ui.pushToast('info', msg.none(res.examined))
+        ui.pushToast('info', msg.none)
         return
       }
       candidates.value = found

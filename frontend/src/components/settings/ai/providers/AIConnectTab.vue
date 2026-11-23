@@ -54,7 +54,7 @@ async function disconnect(): Promise<void> {
 <template>
   <section class="connect" :aria-label="t.heading" data-testid="ai-connect-tab">
     <div class="group">
-      <h4 class="sh">{{ t.heading }}</h4>
+      <h3 class="sh">{{ t.heading }}</h3>
       <p class="hint">{{ t.hint }}</p>
     </div>
     <ul class="box" :aria-label="t.listLabel" data-testid="ai-provider-list">
@@ -97,8 +97,7 @@ async function disconnect(): Promise<void> {
 .sh {
   margin: 0;
   font-weight: 600;
-  font-size: var(--font-size-sm);
-  line-height: var(--line-height-sm);
+  font-size: var(--font-size-base);
 }
 
 .hint {
@@ -125,6 +124,7 @@ async function disconnect(): Promise<void> {
   margin: 0;
   color: var(--danger);
   font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
 }
 
 /* 390px 幅: 行はそれぞれ枠のあるカードにし、一覧の外枠は外す。 */

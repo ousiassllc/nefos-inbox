@@ -78,6 +78,12 @@
   --menu-pad-x: var(--s-3);
   /* 作成画面の項目ラベル列（宛先・差出人・件名）の幅 */
   --compose-label-w: 56px;
+  /* 設定の「機能ごとに使う AI」の項目名（AIFeatureRow の .flab）の幅。ガイドの --label-col（72〜96px） */
+  --label-col: 96px;
+  /* リスト（設定の行）の最小高さ。ガイドの --list-row-h（48） */
+  --list-row-h: 48px;
+  /* 2 行リストのタイトルとキャプションの間。ガイドの --list-title-caption-gap（2。4px 基準の例外でガイドが定める値） */
+  --list-title-caption-gap: 2px;
 
   /* 影はモーダルだけ。カード・パネル・ポップアップは 1px solid var(--border) で区切る */
   --shadow-modal: 0 1px 2px rgb(0 0 0 / 6%);
@@ -95,6 +101,8 @@
   --icon-sm: 16px;
   --icon-md: 20px;
   --icon-lg: 24px;
+  /* 空状態のマスコットだけ（ガイド §6）。UI のアイコンには使わない */
+  --icon-xl: 32px;
 
   /* モーション */
   --motion-fast: 120ms;

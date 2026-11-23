@@ -15,7 +15,7 @@ export const nav = {
     label: 'エージェント',
     preparing: '準備中',
     panelTitle: 'エージェント',
-    panelBody: 'エージェントは準備中です。できあがるまで、ここには何も出ません。',
+    panelBody: 'エージェントは準備中です。',
     close: 'エージェントを閉じる',
   },
   tabs: {

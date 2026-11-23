@@ -19,6 +19,10 @@ describe('間隔レシピ（S2・#212）', () => {
       'padding: var(--pad-card-sm)',
     )
   })
+
+  test('サイドバーのエージェントの入口の左右 padding は --menu-pad-x（設定の行と左端をそろえる・#437）', () => {
+    expect(rule('shell/SidebarAgent.vue', '.agent {')).toContain('padding: 0 var(--menu-pad-x)')
+  })
 })
 
 describe('線（S4・#212）', () => {
@@ -26,6 +30,10 @@ describe('線（S4・#212）', () => {
     expect(rule('compose/RichTextEditor.vue', '[data-hitomado-quote])')).toContain(
       'border-left: 1px solid var(--mute)',
     )
+  })
+
+  test('本文エディタの枠（.rte）は overflow: hidden で、ツールバーの地を角丸で切る（#437）', () => {
+    expect(rule('compose/RichTextEditor.vue', '.rte {')).toContain('overflow: hidden')
   })
 })
 
@@ -151,6 +159,31 @@ describe('ツールチップの padding（ガイドの 6×10・#286）', () => {
     expect(tokens).toMatch(/--tip-pad-x:\s*10px;/)
     expect(rule('ui/BaseTooltip.vue', ':global(.tip-pop) {')).toContain(
       'padding: var(--tip-pad-y) var(--tip-pad-x)',
+    )
+  })
+})
+
+describe('リストの行（ガイド §4・#441）', () => {
+  test('--list-row-h は 48px、--list-title-caption-gap は 2px（4px 基準の例外）', () => {
+    expect(tokens).toMatch(/--list-row-h:\s*48px;/)
+    expect(tokens).toMatch(/--list-title-caption-gap:\s*2px;/)
+  })
+
+  test('設定の行の最小高さは --list-row-h で、px を直書きしない', () => {
+    expect(rule('settings/ai/providers/AIProviderRow.vue', '.prow {')).toContain(
+      'min-height: var(--list-row-h)',
+    )
+    expect(rule('settings/ai/features/AIFeatureRow.vue', '.frow {')).toContain(
+      'min-height: var(--list-row-h)',
+    )
+    expect(rule('settings/ai/features/AIUseTab.vue', '.agent {')).toContain(
+      'min-height: var(--list-row-h)',
+    )
+  })
+
+  test('AIProviderRow の名前とキャプションの間は --list-title-caption-gap', () => {
+    expect(rule('settings/ai/providers/AIProviderRow.vue', '.meta {')).toContain(
+      'gap: var(--list-title-caption-gap)',
     )
   })
 })

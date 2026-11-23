@@ -148,6 +148,7 @@ onBeforeUnmount(() => stopDrop?.())
 .attach-tag {
   color: var(--mute);
   font-size: var(--font-size-xs);
+  line-height: var(--line-height-xs);
 }
 
 .attach-size {

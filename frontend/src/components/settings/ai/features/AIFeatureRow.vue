@@ -168,7 +168,7 @@ function saveManual(provider: string): void {
   display: flex;
   align-items: flex-start;
   gap: var(--s-3);
-  min-height: 48px;
+  min-height: var(--list-row-h);
   padding: var(--s-2) var(--s-4);
 }
 
@@ -176,9 +176,8 @@ function saveManual(provider: string): void {
   display: flex;
   flex: none;
   align-items: center;
-  width: 148px;
+  width: var(--label-col);
   min-height: var(--control-h);
-  font-weight: 500;
   font-size: var(--font-size-sm);
   line-height: var(--line-height-sm);
 }
@@ -201,6 +200,7 @@ function saveManual(provider: string): void {
   min-height: var(--control-h);
   color: var(--mute);
   font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
 }
 
 .need {
@@ -228,15 +228,17 @@ function saveManual(provider: string): void {
   align-items: center;
   min-height: var(--control-h);
   font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
 }
 
 .link {
   min-height: 0;
   padding: 0;
   border-color: transparent;
-  font-weight: 500;
+  font-weight: 400;
   white-space: nowrap;
   text-decoration: underline;
+  text-decoration-color: var(--mute);
   text-underline-offset: 2px;
 }
 

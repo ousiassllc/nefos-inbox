@@ -292,8 +292,10 @@ async function remove(): Promise<void> {
 
 .legend {
   padding: 0 var(--s-1);
+  font-weight: 600;
   font-size: var(--font-size-sm);
-  color: var(--mute);
+  line-height: var(--line-height-sm);
+  color: var(--ink);
 }
 
 .list {

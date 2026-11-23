@@ -5,6 +5,7 @@ import { common, inboxZero as msg } from '../../lib/messages'
 import { useInboxZeroStore } from '../../stores/inboxZero'
 import { aiDestination } from '../settings/ai/aiDestination'
 import BaseButton from '../ui/BaseButton.vue'
+import BaseCheckbox from '../ui/BaseCheckbox.vue'
 import BaseDialog from '../ui/BaseDialog.vue'
 import Spinner from '../ui/Spinner.vue'
 
@@ -45,9 +46,10 @@ function onReviewOpen(open: boolean): void {
     :open="consentOpen"
     size="sm"
     :title="t.consentTitle(dest?.providerLabel ?? '')"
-    :description="t.consentDescription(dest?.providerLabel ?? '', dest?.url ?? '')"
+    :body-label="t.consentTitle(dest?.providerLabel ?? '')"
     @update:open="onConsentOpen"
   >
+    <p class="body" data-testid="inbox-zero-consent-body">{{ t.consentDescription(dest?.providerLabel ?? '', dest?.url ?? '') }}</p>
     <template #footer>
       <BaseButton data-testid="inbox-zero-consent-cancel" @click="zero.cancel()">{{ common.cancel }}</BaseButton>
       <BaseButton variant="primary" data-testid="inbox-zero-consent-agree" @click="zero.agree()">{{ t.consentAgree }}</BaseButton>
@@ -58,6 +60,7 @@ function onReviewOpen(open: boolean): void {
     :open="checkingOpen"
     size="sm"
     :title="t.checkingTitle"
+    :body-label="t.checkingTitle"
     @update:open="onCheckingOpen"
   >
     <p class="checking" data-testid="inbox-zero-checking"><Spinner /> {{ t.checking }}</p>
@@ -71,22 +74,21 @@ function onReviewOpen(open: boolean): void {
     size="md"
     :eyebrow="t.dialogEyebrow"
     :title="t.dialogTitle"
-    :description="t.dialogDescription"
     stack-footer
     @update:open="onReviewOpen"
   >
+    <p class="body">{{ t.dialogDescription }}</p>
     <p class="count" data-testid="inbox-zero-count" aria-live="polite">
       {{ t.selected(count, zero.candidates.length) }}<template v-if="zero.skipped > 0">　{{ t.skipped(zero.skipped) }}</template>
     </p>
     <ul class="list" :aria-label="t.listLabel" data-testid="inbox-zero-list">
       <li v-for="c in zero.candidates" :key="keyOf(c.ref)">
+        <!-- biome-ignore lint/a11y/noLabelWithoutControl: 中の BaseCheckbox の根は <span> で、<input> はその中にある（Biome はコンポーネントの中の入力を見つけられない） -->
         <label class="row">
-          <input
-            type="checkbox"
-            class="box"
-            :checked="zero.checked.has(keyOf(c.ref))"
+          <BaseCheckbox
+            :model-value="zero.checked.has(keyOf(c.ref))"
             :data-testid="`inbox-zero-item-${keyOf(c.ref)}`"
-            @change="zero.toggle(keyOf(c.ref))"
+            @update:model-value="zero.toggle(keyOf(c.ref))"
           />
           <span class="text">
             <span class="from">{{ c.from }}</span>
@@ -103,6 +105,16 @@ function onReviewOpen(open: boolean): void {
 </template>
 
 <style scoped>
+.body {
+  margin: 0 0 var(--s-3);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+}
+
+.body:last-child {
+  margin-bottom: 0;
+}
+
 .checking {
   display: flex;
   align-items: center;
@@ -123,6 +135,7 @@ function onReviewOpen(open: boolean): void {
   list-style: none;
   border: 1px solid var(--border);
   border-radius: var(--r-md);
+  overflow: hidden;
 }
 
 .list > li + li {
@@ -141,18 +154,8 @@ function onReviewOpen(open: boolean): void {
   background: var(--accent-soft);
 }
 
-.box {
-  flex: none;
-  width: var(--icon-sm);
-  height: var(--icon-sm);
-  margin: var(--s-1) 0 0;
-  accent-color: var(--accent);
-  cursor: pointer;
-}
-
-.box:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+.row .checkbox {
+  margin-top: calc((var(--font-size-sm) * var(--line-height-sm) - 18px) / 2);
 }
 
 .text {
@@ -164,7 +167,6 @@ function onReviewOpen(open: boolean): void {
 
 .from {
   overflow: hidden;
-  font-weight: 600;
   font-size: var(--font-size-sm);
   line-height: var(--line-height-sm);
   text-overflow: ellipsis;
@@ -173,6 +175,7 @@ function onReviewOpen(open: boolean): void {
 
 .subject {
   overflow: hidden;
+  color: var(--mute-on-soft);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-sm);
   text-overflow: ellipsis;

@@ -6,6 +6,8 @@ import type { Directive } from 'vue'
 export function spawn(el: HTMLElement, ev: PointerEvent): void {
   if (ev.button !== 0) return // 右・中ボタンは click にならないので出さない（ペン・タッチは button=0）
   if (el instanceof HTMLButtonElement && el.disabled) return
+  // disabled にせず aria-busy（処理中）・aria-disabled（押せない）で示すボタン（InboxZeroButton）でも出さない。
+  if (el.getAttribute('aria-busy') === 'true' || el.getAttribute('aria-disabled') === 'true') return
   if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
   const rect = el.getBoundingClientRect()
   // クリック点から最も遠い角まで広げれば、ボタン全体を覆える。

@@ -15,6 +15,8 @@ import { dirname, join, resolve } from 'node:path'
 
 const root = resolve(import.meta.dir, '../..')
 const noticePath = join(root, 'NOTICE')
+// 同梱するロゴ（商標）の出どころ・利用条件。ソフトウェアの依存ではないので Components とは別の節として、この手書きのファイルをそのまま載せる。
+const logosNoticePath = join(root, 'frontend/src/assets/provider-logos/NOTICE')
 const REPO = 'https://github.com/ousiassllc/nefos-inbox'
 
 type Component = {
@@ -238,6 +240,7 @@ function render(components: Component[]): string {
     for (const c of mpl) out.push(`- ${label(c)} (${c.license})`, `    repository: ${c.source}`, `    source archive: ${c.tarball}`)
     out.push('')
   }
+  out.push(rule, 'Third-party trademarks and logos', rule, '', normalize(readFileSync(logosNoticePath, 'utf8')), '')
   out.push(rule, 'Components', rule, '')
   for (const c of components) out.push(`- [${c.kind}] ${label(c)} - ${c.license}`)
   out.push('', rule, 'License texts', rule)

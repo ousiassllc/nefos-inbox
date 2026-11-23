@@ -17,7 +17,7 @@ const ui = useUiStore()
     data-testid="agent-entry"
     @click="ui.agentOpen ? ui.closeAgent() : ui.openAgent()"
   >
-    <AgentMascot :size="32" />
+    <AgentMascot :size="24" />
     <span class="text">
       <span class="title">{{ nav.agent.label }}</span>
       <span class="sub">{{ nav.agent.preparing }}</span>
@@ -32,7 +32,7 @@ const ui = useUiStore()
   gap: var(--s-3);
   width: 100%;
   min-height: 48px;
-  padding: 0 var(--s-2) 0 var(--s-2);
+  padding: 0 var(--menu-pad-x);
   border: none;
   border-radius: var(--r-md);
   background: var(--bone);

@@ -122,7 +122,7 @@ function onLabelSelect(key: string): void {
 .count {
   margin-left: var(--s-2);
   color: var(--mute);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-sm); line-height: var(--line-height-sm);
 }
 
 .mode {
@@ -130,14 +130,15 @@ function onLabelSelect(key: string): void {
   align-items: center;
   gap: var(--s-2);
   min-width: 0;
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-sm); line-height: var(--line-height-sm);
 }
 
 .unread-only {
   display: flex;
   align-items: center;
   gap: var(--s-2);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
   white-space: nowrap;
 }
 
@@ -145,7 +146,7 @@ function onLabelSelect(key: string): void {
   border: none;
   background: transparent;
   color: var(--ink);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-sm); line-height: var(--line-height-sm);
   cursor: pointer;
   text-decoration: underline;
   text-decoration-color: var(--mute);

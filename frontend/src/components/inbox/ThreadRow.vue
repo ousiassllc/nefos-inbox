@@ -133,6 +133,7 @@ const label = computed(
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
 }
 
 .count {
@@ -140,11 +141,13 @@ const label = computed(
   color: var(--row-mute);
   font-family: var(--font-mono);
   font-size: var(--font-size-xs);
+  line-height: var(--line-height-xs);
 }
 
 .clip {
   flex: none;
   font-size: var(--font-size-xs);
+  line-height: var(--line-height-xs);
 }
 
 .date {
@@ -152,6 +155,7 @@ const label = computed(
   color: var(--row-mute);
   font-family: var(--font-mono);
   font-size: var(--font-size-xs);
+  line-height: var(--line-height-xs);
 }
 
 .dot {
@@ -169,6 +173,7 @@ const label = computed(
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
 }
 
 .snippet {
@@ -179,6 +184,7 @@ const label = computed(
   white-space: nowrap;
   color: var(--row-mute);
   font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
 }
 
 /* 未読は太字にせず、未読ドットと文字色の対比（未読 = --ink、既読 = --row-mute）で区別する。 */
@@ -203,6 +209,7 @@ const label = computed(
   gap: var(--s-1);
   color: var(--ink);
   font-size: var(--font-size-xs);
+  line-height: var(--line-height-xs);
 }
 
 .reauth .icon {

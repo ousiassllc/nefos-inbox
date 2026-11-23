@@ -1,0 +1,31 @@
+Provider logos used in the AI provider list (ProviderIcon.vue)
+
+These files are NOT covered by the AGPL-3.0 license of Nefos Inbox. They are trademarks / copyrighted
+brand assets of their owners, used here only to identify the owner's own service in the list of AI
+providers the user can connect. Nefos Inbox is not affiliated with, sponsored by, or endorsed by them.
+The files are used exactly as distributed by the owner (byte-identical; no recoloring, cropping, or
+other modification). Nefos Inbox does not ship any self-drawn or redrawn logo.
+
+OAI_OpenAI-Blossom_Black.svg, OAI_OpenAI-Blossom_White.svg
+  Owner:      OpenAI (the "OpenAI" name and OpenAI logo are OpenAI trademarks)
+  Used for:   the "ChatGPT" row (sign in with a ChatGPT account, an OpenAI service)
+  Source:     "Download logos" on https://openai.com/brand/ ->
+              https://cdn.openai.com/brand/openai-logos.zip (OpenAI-logos/SVGs/), retrieved 2026-11-23
+              (zip SHA-256 c54e85ab5884228f89f0230dd8effa8d588cad78166fe954135f4afa553222db)
+  Terms:      OpenAI "Design Guidelines" and "Usage terms" at https://openai.com/brand/
+              (non-exclusive, non-transferable permission; use the logo only where it directly relates to
+              OpenAI services; use it as provided; do not imply endorsement; do not feature it more
+              prominently than our own name or marks; OpenAI may require changes or terminate permission,
+              after which the files must be removed). Permission requests: partnercomms@openai.com
+  SHA-256:    75c1e9fffa5e8c437bec1d67197a73992bca45d166c6ff23215185dea8fae92a  OAI_OpenAI-Blossom_Black.svg
+              01d158767c4eec0e47bd617e67759c33da0accd1438be1a8d29dfdb99ce87285  OAI_OpenAI-Blossom_White.svg
+  Display:    the Black file on light backgrounds, the White file on dark backgrounds (both from the
+              official set), at the files' own proportions with their built-in clear space.
+
+No logo file is included for the providers below; ProviderIcon.vue shows an initial-letter tile (or a
+generic server icon) for them.
+  Anthropic:  the Anthropic Trademark Guidelines (https://www.anthropic.com/legal/trademark-guidelines)
+              allow use of its logos only as specifically permitted by Anthropic and only in materials it
+              approves beforehand, so no Anthropic/Claude logo is included until that permission exists.
+  TypeSafe AI (Jev): TypeSafe AI publishes no brand kit or logo usage terms (https://typesafe.ai/).
+  OpenAI-compatible: a generic endpoint, not an OpenAI service; the OpenAI logo is not used for it.

@@ -66,7 +66,7 @@ const note = computed(() => {
   display: flex;
   align-items: center;
   gap: var(--s-3);
-  min-height: 48px;
+  min-height: var(--list-row-h);
   padding: var(--s-2) var(--s-4);
 }
 
@@ -74,7 +74,7 @@ const note = computed(() => {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--list-title-caption-gap);
   min-width: 0;
 }
 
@@ -83,7 +83,6 @@ const note = computed(() => {
   flex-wrap: wrap;
   align-items: center;
   gap: var(--s-2);
-  font-weight: 500;
   font-size: var(--font-size-sm);
   line-height: var(--line-height-sm);
 }

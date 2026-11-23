@@ -96,6 +96,7 @@ const label = computed(() => msg.open(props.account?.displayName ?? '', recipien
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
 }
 
 .date {
@@ -103,6 +104,7 @@ const label = computed(() => msg.open(props.account?.displayName ?? '', recipien
   color: var(--row-mute);
   font-family: var(--font-mono);
   font-size: var(--font-size-xs);
+  line-height: var(--line-height-xs);
 }
 
 .subject {
@@ -112,6 +114,7 @@ const label = computed(() => msg.open(props.account?.displayName ?? '', recipien
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
 }
 
 .snippet {
@@ -122,5 +125,6 @@ const label = computed(() => msg.open(props.account?.displayName ?? '', recipien
   white-space: nowrap;
   color: var(--row-mute);
   font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
 }
 </style>

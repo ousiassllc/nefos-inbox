@@ -46,7 +46,7 @@ async function toggle(reason: InboxZeroReason, on: boolean): Promise<void> {
 .reasons {
   display: flex;
   flex-direction: column;
-  gap: var(--s-3);
+  gap: var(--gap-field);
   margin: 0;
   padding: 0;
   border: none;
@@ -54,6 +54,7 @@ async function toggle(reason: InboxZeroReason, on: boolean): Promise<void> {
 
 .sub {
   padding: 0;
+  margin-bottom: var(--s-2);
   font-weight: 600;
   font-size: var(--font-size-sm);
   line-height: var(--line-height-sm);
@@ -69,8 +70,8 @@ async function toggle(reason: InboxZeroReason, on: boolean): Promise<void> {
   display: flex;
   flex-direction: column;
   gap: var(--s-1);
-  font-size: var(--font-size-sm);
-  line-height: var(--line-height-sm);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
 }
 
 .hint {
@@ -83,11 +84,12 @@ async function toggle(reason: InboxZeroReason, on: boolean): Promise<void> {
   margin: 0;
   color: var(--danger);
   font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
 }
 
 .intro {
   margin: 0;
-  color: var(--mute);
+  color: var(--ink);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-sm);
 }

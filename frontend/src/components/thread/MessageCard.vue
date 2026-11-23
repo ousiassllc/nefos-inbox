@@ -133,6 +133,7 @@ watch(
 .clip {
   color: var(--mute);
   font-size: var(--font-size-xs);
+  line-height: var(--line-height-xs);
 }
 
 .date {
@@ -140,6 +141,7 @@ watch(
   color: var(--mute);
   font-family: var(--font-mono);
   font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
   white-space: nowrap;
 }
 

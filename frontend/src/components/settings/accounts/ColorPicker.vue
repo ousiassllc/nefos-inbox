@@ -108,5 +108,6 @@ function colorName(key: string): string {
 .current {
   color: var(--mute);
   font-size: var(--font-size-xs);
+  line-height: var(--line-height-xs);
 }
 </style>

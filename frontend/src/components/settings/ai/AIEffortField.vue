@@ -43,8 +43,8 @@ const options = computed<SelectOption[]>(() => [
 
 .label {
   flex: none;
-  color: var(--mute);
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
   white-space: nowrap;
 }
 
@@ -53,11 +53,6 @@ const options = computed<SelectOption[]>(() => [
   .field {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .label {
-    color: var(--ink);
-    font-size: var(--font-size-sm);
   }
 }
 </style>

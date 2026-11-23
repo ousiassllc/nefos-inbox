@@ -64,10 +64,12 @@ const options = computed(() =>
   flex: 0 0 var(--compose-label-w);
   color: var(--mute);
   font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
 }
 
 .sender-email {
   font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
 }
 
 .sender-hint {
