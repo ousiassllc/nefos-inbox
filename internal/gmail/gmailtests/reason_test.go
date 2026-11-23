@@ -106,6 +106,38 @@ func TestSecretStoreReadFailureIsNotNeedsReauth(t *testing.T) {
 	}
 }
 
+// トークン更新エンドポイントの一時的・想定外の失敗（5xx・429・invalid_grant 以外の 400・HTML や空の応答・access_token の無い 200）は、
+// 再接続待ちにしない（#369）。再接続待ちは再試行では戻らない（利用者が再接続するまで同期が止まる）ので、一時的な失敗で入ってはならない。
+func TestTokenEndpointTransientFailuresAreNotNeedsReauth(t *testing.T) {
+	raw := func(status int, contentType, body string) func(http.ResponseWriter, *http.Request) {
+		return func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Content-Type", contentType)
+			w.WriteHeader(status)
+			_, _ = w.Write([]byte(body))
+		}
+	}
+	for name, handler := range map[string]func(http.ResponseWriter, *http.Request){
+		"500 json":                      raw(500, "application/json", `{"error":"internal_failure"}`),
+		"503 html":                      raw(503, "text/html", "<html>unavailable</html>"),
+		"429":                           raw(429, "application/json", `{"error":"rate_limit_exceeded"}`),
+		"400 invalid_request":           raw(400, "application/json", `{"error":"invalid_request"}`),
+		"403 html (proxy)":              raw(403, "text/html", "<html>forbidden</html>"),
+		"400 empty body":                raw(400, "application/json", ""),
+		"200 captive portal html":       raw(200, "text/html", "<html>login</html>"),
+		"200 json without access_token": raw(200, "application/json", `{"token_type":"Bearer","expires_in":3600}`),
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := newTestEnv(t)
+			e.f.Token = handler
+			_, err := e.c.Profile(context.Background(), testAccount)
+			require.Error(t, err)
+			assert.NotErrorIs(t, err, gmail.ErrNeedsReauth)
+			assert.NotErrorIs(t, err, gmail.ErrClientRejected)
+			assert.Empty(t, gmail.ReauthReason(err))
+		})
+	}
+}
+
 // 401 でアクセストークンを取り直して再試行したことを、再接続待ちの前触れとして Info で残す（アカウントは ID だけ）。
 func TestUnauthorizedRetryIsLogged(t *testing.T) {
 	var buf bytes.Buffer

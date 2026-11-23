@@ -157,3 +157,37 @@ func TestNeedsReauthLogsSecondsSinceLastSync(t *testing.T) {
 	require.Len(t, recs, 1)
 	assert.InDelta(t, 90, recs[0]["since_last_sync_s"], 0)
 }
+
+// 手動更新（Android の Worker のヘッドレス同期が使う）で一時的に失敗したときも、元のエラーを Warn で残す。再接続待ちにはならない（#369）。
+func TestRefreshTransientFailureIsLogged(t *testing.T) {
+	h, buf := newLoggedHarness(t)
+	h.account("a", true, synced("1"))
+	h.gm.Edit("a", func(a *synctest.Script) { a.HistoryErr = fmt.Errorf("secrets: get: %w", gmail.ErrGeneric) })
+
+	res := h.s.Refresh(t.Context(), []string{"a"})
+	require.Len(t, res, 1)
+	require.ErrorIs(t, res[0].Err, gmail.ErrGeneric)
+
+	recs := buf.records("sync refresh failed")
+	require.Len(t, recs, 1)
+	assert.Equal(t, "WARN", recs[0]["level"])
+	assert.Equal(t, "a", recs[0]["account"])
+	assert.Empty(t, buf.records(reauthMsg))
+	assert.Equal(t, store.StatusError, h.st.Account("a").Status)
+}
+
+// 再接続待ちになる失敗は logNeedsReauth が理由つきで残すので、手動更新の失敗のログは重ねて出さない。
+func TestRefreshNeedsReauthIsNotLoggedTwice(t *testing.T) {
+	h, buf := newLoggedHarness(t)
+	h.account("a", true, synced("1"))
+	h.gm.Edit("a", func(a *synctest.Script) {
+		a.HistoryErr = gmail.WithReason(fmt.Errorf("x: %w", gmail.ErrNeedsReauth), gmail.ReasonInvalidGrant)
+	})
+
+	res := h.s.Refresh(t.Context(), []string{"a"})
+	require.Len(t, res, 1)
+	require.ErrorIs(t, res[0].Err, gmail.ErrNeedsReauth)
+
+	assert.Len(t, buf.records(reauthMsg), 1)
+	assert.Empty(t, buf.records("sync refresh failed"))
+}

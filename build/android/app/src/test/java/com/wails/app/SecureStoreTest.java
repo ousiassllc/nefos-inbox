@@ -29,6 +29,16 @@ import javax.crypto.AEADBadTagException;
  */
 public class SecureStoreTest {
 
+    /**
+     * android.security.KeyStoreException の模擬。公開のコンストラクタが無い（android.jar では引数なしがパッケージ内だけ）ので、
+     * リフレクションで作る。本番の Keystore の失敗は、この型を原因に持つ InvalidKeyException／UnrecoverableKeyException で届く。
+     */
+    static Exception androidKeyStoreException() throws Exception {
+        java.lang.reflect.Constructor<?> c = Class.forName("android.security.KeyStoreException").getDeclaredConstructor();
+        c.setAccessible(true);
+        return (Exception) c.newInstance();
+    }
+
     /** メモリ上のフェイク。failNext に入れた例外を次の 1 回だけ投げる（Keystore の鍵の喪失の模擬）。 */
     static final class FakeBackend implements SecureStore.Backend {
         final Map<String, String> data = new HashMap<>();
@@ -240,6 +250,85 @@ public class SecureStoreTest {
         }
         assertEquals(1, b.resets);
         assertNull(s.get("k"));
+    }
+
+    /**
+     * Keystore は鍵の無効化・不在以外の Cipher.init の失敗も InvalidKeyException に包んで投げる（"Keystore operation failed"。原因は
+     * android.security.KeyStoreException）。鍵の喪失と確実には言えないので、即座には消さず再試行し、直れば消さない（#369）。
+     */
+    @Test
+    public void invalidKeyExceptionCausedByKeystoreFailureIsRetriedNotWiped() throws Exception {
+        FakeBackend b = new FakeBackend();
+        SecureStore s = new SecureStore(b, 0);
+        s.put("k", "v");
+        b.failNext.add(new SecurityException("Could not decrypt value",
+                new InvalidKeyException("Keystore operation failed", androidKeyStoreException())));
+        assertEquals("v", s.get("k"));
+        assertEquals(0, b.resets);
+    }
+
+    /** 端末のロック・ユーザー認証が要る失敗（UserNotAuthenticatedException。鍵は残っている）は、鍵の喪失ではなく、消さずに失敗として返す。 */
+    @Test
+    public void userNotAuthenticatedIsFailedNotKeyLost() throws Exception {
+        FakeBackend b = new FakeBackend();
+        SecureStore s = new SecureStore(b, 0);
+        s.put("k", "v");
+        b.failNext.add(new SecurityException("Could not decrypt value", new android.security.keystore.UserNotAuthenticatedException()));
+        try {
+            s.get("k");
+            fail();
+        } catch (SecureStore.SecureStoreException e) {
+            assertEquals(SecureStore.Kind.FAILED, e.kind());
+        }
+        assertEquals(0, b.resets);
+        assertEquals("v", s.get("k"));
+    }
+
+    /**
+     * KeyStore.getKey は、鍵の不在・無効化以外の Keystore の失敗を UnrecoverableKeyException("Failed to obtain information about key"。
+     * 原因は android.security.KeyStoreException）に包んで投げる。これも一時的な不調かもしれないので、再試行する（#369）。
+     */
+    @Test
+    public void unrecoverableKeyExceptionCausedByKeystoreFailureIsRetriedNotWiped() throws Exception {
+        FakeBackend b = new FakeBackend();
+        SecureStore s = new SecureStore(b, 0);
+        s.put("k", "v");
+        java.security.UnrecoverableKeyException failure = new java.security.UnrecoverableKeyException("Failed to obtain information about key");
+        failure.initCause(androidKeyStoreException());
+        b.failNext.add(failure);
+        assertEquals("v", s.get("k"));
+        assertEquals(0, b.resets);
+    }
+
+    /** Keystore の操作の失敗が再試行しても続くときは、これまでどおり鍵の喪失として作り直す（鍵を失った端末でストアが詰まらない）。 */
+    @Test
+    public void persistentKeystoreOperationFailureIsKeyLostAfterRetries() throws Exception {
+        FakeBackend b = new FakeBackend();
+        SecureStore s = new SecureStore(b, 0);
+        s.put("k", "v");
+        for (int i = 0; i < 3; i++) { // 初回 + 再試行 2 回
+            b.failNext.add(new InvalidKeyException("Keystore operation failed", androidKeyStoreException()));
+        }
+        try {
+            s.get("k");
+            fail();
+        } catch (SecureStore.SecureStoreException e) {
+            assertEquals(SecureStore.Kind.KEY_LOST, e.kind());
+        }
+        assertEquals(1, b.resets);
+    }
+
+    /** 鍵の無効化・不在は、これまでどおり確実な鍵の喪失として即座に作り直す（原因が付いていても。原因の無い UnrecoverableKeyException も同じ）。 */
+    @Test
+    public void permanentInvalidationIsStillDefiniteKeyLoss() throws Exception {
+        assertTrue(SecureStore.isDefiniteKeyLoss(new SecurityException("x", new android.security.keystore.KeyPermanentlyInvalidatedException())));
+        assertTrue(SecureStore.isDefiniteKeyLoss(new android.security.keystore.KeyPermanentlyInvalidatedException(
+                "User changed or deleted their auth credentials", androidKeyStoreException())));
+        assertTrue(SecureStore.isDefiniteKeyLoss(new java.security.UnrecoverableKeyException("Key permanently invalidated")));
+        assertTrue(SecureStore.isDefiniteKeyLoss(new InvalidKeyException("Failed to unwrap key")));
+        assertFalse(SecureStore.isDefiniteKeyLoss(new android.security.keystore.UserNotAuthenticatedException()));
+        assertFalse(SecureStore.isDefiniteKeyLoss(
+                new InvalidKeyException("Keystore operation failed", androidKeyStoreException())));
     }
 
     /** 確実な鍵の喪失は再試行せずに即作り直す（失敗は 1 回しか仕込まないので、再試行すれば成功してしまう）。 */
