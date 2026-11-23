@@ -8,7 +8,8 @@
       "frontend/package.json",
       "frontend/tsconfig.json",
       "biome.json",
-      "!frontend/bindings"
+      "!frontend/bindings",
+      "!frontend/src/assets/provider-logos"
     ]
   },
   "formatter": {
