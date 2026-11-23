@@ -83,9 +83,16 @@ func (s *Scheduler) refreshCall(id string) *refreshCall {
 
 // runRefreshCycle は手動更新の 1 周期を実行する。panic は記録してエラーにする
 // （呼び出し側が c.err を設定して c.done を閉じられるようにし、Refresh を戻らなくしない）。
+// 失敗は、周期の同期（cycle）と同じく Warn で残す。Worker のヘッドレス同期（Android）は手動更新だけで動くので、これが無いと、
+// 資格情報ストアの読み出しの失敗などの一時的な失敗（error 状態）の理由がログに残らない（#369）。再接続待ちになる失敗は
+// logNeedsReauth が理由つきで残すので（paused になる）、ここでは重ねて出さない。
 func (s *Scheduler) runRefreshCycle(a *account) (err error) {
 	defer logging.RecoverTo(s.log, "sync refresh", &err)
-	return s.runCycle(a.ctx, a)
+	err = s.runCycle(a.ctx, a)
+	if err != nil && a.ctx.Err() == nil && !a.paused.Load() {
+		s.log.Warn("sync refresh failed", "account", a.id, "err", err)
+	}
+	return err
 }
 
 func closedChan() chan struct{} {

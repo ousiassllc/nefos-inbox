@@ -7,6 +7,7 @@ import (
 	"log/slog"
 
 	"github.com/ousiassllc/nefos-inbox/internal/gmail"
+	"github.com/ousiassllc/nefos-inbox/internal/oauth"
 	"github.com/ousiassllc/nefos-inbox/internal/secrets"
 	"github.com/ousiassllc/nefos-inbox/internal/store"
 )
@@ -29,4 +30,15 @@ func Override(ctx context.Context, dir string, st store.Store, _ secrets.Store, 
 	}
 	logger.Warn("E2E mode: Gmail is a seeded fake and credentials are in memory; never use with real accounts", "marker", Marker)
 	return sec, NewRecordingGmail(fake, dir), nil
+}
+
+// OAuthOptions は opts の認可・トークン・userinfo・失効の URL を、アプリ内の偽の Google（IdP。idp.go）に差し替え、止める関数を返す。
+// ブラウザを開く経路（OpenBrowser）は差し替えない: 本物の Intent で端末のブラウザを開き、ブラウザ→ループバックのコールバック→アプリへ戻る、までを実際に通す。
+func OAuthOptions(opts oauth.Options, logger *slog.Logger) (oauth.Options, func(), error) {
+	idp, err := StartIdP()
+	if err != nil {
+		return opts, func() {}, err
+	}
+	logger.Warn("E2E mode: OAuth endpoints are a fake IdP on loopback; never use with real accounts", "marker", Marker)
+	return idp.Options(opts), idp.Close, nil
 }

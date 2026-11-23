@@ -12,6 +12,7 @@ import (
 	"log/slog"
 
 	"github.com/ousiassllc/nefos-inbox/internal/gmail"
+	"github.com/ousiassllc/nefos-inbox/internal/oauth"
 	"github.com/ousiassllc/nefos-inbox/internal/secrets"
 	"github.com/ousiassllc/nefos-inbox/internal/store"
 )
@@ -22,4 +23,9 @@ const Enabled = false
 // Override は E2E モードでないとき、渡された secrets・gmail をそのまま返す。
 func Override(_ context.Context, _ string, _ store.Store, sec secrets.Store, gm gmail.Client, _ *slog.Logger) (secrets.Store, gmail.Client, error) {
 	return sec, gm, nil
+}
+
+// OAuthOptions は E2E モードでないとき、渡された opts をそのまま返す（止める関数は何もしない）。
+func OAuthOptions(opts oauth.Options, _ *slog.Logger) (oauth.Options, func(), error) {
+	return opts, func() {}, nil
 }

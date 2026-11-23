@@ -2,7 +2,8 @@ name: Android E2E
 
 # 手動実行専用（workflow_dispatch）。PR の CI（ci.yml）には入れない: KVM つきのエミュレーターは実行時間が長く、
 # 実機・CI で動かして緑になるまでは、PR を赤くしうるジョブを入れない方針（docs/environment/android.md §17）。
-# 起動 → 一覧 → 返信下書き → レンダラ落ちからの復帰を、E2E 用 APK（ビルドタグ e2e。シード済みのフェイク Gmail）で通す。
+# 起動 → 一覧 → 返信下書き → アカウント追加のログイン（#368）→ レンダラ落ちからの復帰を、E2E 用 APK（ビルドタグ e2e。シード済みのフェイク Gmail・
+# アプリ内の偽の Google）で通す。ログインは、端末のブラウザを経由して認可 → 127.0.0.1 のコールバック → アプリへ戻る、までの実フローを通す。
 # 本物の Google アカウントは使わない。release の APK にはこのモードは入らない（android:verify が検査する）。
 on:
   workflow_dispatch:
@@ -67,6 +68,8 @@ jobs:
         env:
           E2E_OUT: ${{ runner.temp }}/e2e-out
           E2E_LIST_TIMEOUT: "300"
+          # ブラウザが見つからないときにログインの手順を静かに飛ばさず、失敗にする（#368）。
+          E2E_LOGIN_REQUIRED: "1"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

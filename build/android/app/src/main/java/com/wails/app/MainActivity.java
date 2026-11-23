@@ -157,11 +157,17 @@ public class MainActivity extends AppCompatActivity {
     /**
      * 起動済み（singleTask）のアプリが通知のタップで前面に出た: 開くスレッドを保持し、Go へ合図する
      * （Go が OpenRequest を取り出し、フロントが準備済みなら notify:open-thread で開く。#88）。
+     * ブラウザの認可の完了ページのリンクで前面に出たとき（AuthReturn）は、ログだけ残して何もしない（#368）。
      */
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
+        // 認可の完了ページの「Nefos Inbox に戻る」リンク（#368）。前面に出るだけでよい（データは読まない。Go は認可の待受をそのまま続ける）。
+        if (AuthReturn.matches(intent)) {
+            Log.i(TAG, "Returned from the browser authorization page");
+            return;
+        }
         OpenRequest request = OpenRequest.fromIntent(intent);
         if (request != null) {
             OpenRequest.set(request);

@@ -127,7 +127,7 @@ Android 版（試験段階。[docs/environment/android.md](docs/environment/andr
 - **「Android」種別のクライアントは作らないでください**。Android 版は認可コードを 127.0.0.1 の一時ポートで受け取ります。Google は、この方式を Android 種別のクライアントでは認めておらず（[ループバック移行ガイド](https://developers.google.com/identity/protocols/oauth2/resources/loopback-migration)）、カスタム URI スキームも Android では使えません（[OAuth 2.0 for Desktop apps](https://developers.google.com/identity/protocols/oauth2/native-app)。いずれも 2026-11-03 に確認）。デスクトップ アプリ種別のループバックは引き続きサポートされています。
 - **パッケージ名（`jp.ousias.hitomado`）と署名鍵の SHA-1 は、Google Cloud に登録しません**（Android 種別だけが要るものです）。したがって、デバッグ鍵で入れた APK でも、自分で署名した release 鍵の APK でも、同じクライアントで認可できます。署名が違う APK へ入れ替えるときに要るのは、`adb uninstall jp.ousias.hitomado`（アプリのデータも消えます）だけです。
 - 同意画面が **外部かつ「テスト」** のときは、**Google Auth Platform → 対象（Audience）→ テストユーザー**に、Android で追加する Gmail アドレスを登録してください（登録していないアドレスは認可できません）。「テスト」のままだと 7 日でトークンが失効する点は次のとおりです。
-- 認可はブラウザで行います。同意したあと、ブラウザの「このタブを閉じて Nefos Inbox に戻ってください」の表示を見たら、アプリに戻ってください（自動では戻りません）。ブラウザに出ている間にアプリが終了してしまったときは、アプリに「ログインの途中でアプリが終了したため、完了できませんでした」と出るので、もう一度アカウントの追加からやり直してください。
+- 認可はブラウザで行います。同意したあと、ブラウザの完了ページに出る「Nefos Inbox に戻る」ボタンをタップして、アプリに戻ってください（自動で戻る場合もありますが、保証はありません。戻らないときはアプリ切替で戻れます。ブラウザに出したまま長く待つと、端末によっては通信が止められてログインに失敗することがあります）。ブラウザに出ている間にアプリが終了してしまったときは、アプリに「ログインの途中でアプリが終了したため、完了できませんでした」と出るので、もう一度アカウントの追加からやり直してください。
 - 実機・本物の Google アカウントでの動作確認はまだです（確認の手順は [docs/environment/android.md §14.6](docs/environment/android.md#146-実機で確認する手順未確認)）。
 
 ### 重要: 「テスト」のままだと 7 日でトークンが失効します

@@ -27,6 +27,7 @@ import (
 	"github.com/ousiassllc/nefos-inbox/internal/gmail"
 	"github.com/ousiassllc/nefos-inbox/internal/headless"
 	"github.com/ousiassllc/nefos-inbox/internal/logging"
+	"github.com/ousiassllc/nefos-inbox/internal/notify"
 	"github.com/ousiassllc/nefos-inbox/internal/oauth"
 	"github.com/ousiassllc/nefos-inbox/internal/platform"
 	"github.com/ousiassllc/nefos-inbox/internal/secrets"
@@ -126,7 +127,13 @@ func run() error {
 	sched := syncer.New(syncer.Deps{Store: st, Gmail: gm, Notifier: notifier, Events: events, Clock: clk, Logger: syncLogger})
 	oauthTracker := newOAuthTracker(sec)
 	headless.SetAppRefresh(headless.AppRefresh(st, sched, logger))
-	flow := oauth.NewFlow(oauth.Options{OpenBrowser: platform.NewBrowser(wapp).Open, Tracker: oauthTracker, Logger: logger})
+	// E2E 用ビルドのときだけ、認可・トークン・userinfo の宛先を、アプリ内の偽の Google に差し替える（#368。通常のビルドでは何もしない）。
+	oauthOpts, stopIdP, err := e2e.OAuthOptions(oauth.Options{OpenBrowser: platform.NewBrowser(wapp).Open, Tracker: oauthTracker, Logger: logger}, logger)
+	if err != nil {
+		return err
+	}
+	defer stopIdP()
+	flow := oauth.NewFlow(oauthOpts)
 
 	// 自動アップデート（NF-D03）は入れ替えを行えるビルド（Windows）の、リリース版（版が 0.0.0 でない）だけ。
 	busy := &appdeps.Busy{}
@@ -143,6 +150,13 @@ func run() error {
 			Current: version, Dir: updatesDir, Logger: logger,
 		})
 		defer updates.Close()
+	}
+
+	// E2E 用ビルドではフェイクの資格情報がアプリ内にしか無く、Worker（ヘッドレス）は同期できない。E2E のアカウント追加（偽の IdP のログイン。#368）で
+	// WorkManager を登録しないよう、バックグラウンド同期・通知基盤は何もしない実装にする（startBackground の ScheduleSync の省略と同じ理由）。
+	background := platform.NewBackground(logger)
+	if e2e.Enabled {
+		background = notify.NopBackground{}
 	}
 
 	deps := &app.Deps{
@@ -163,7 +177,7 @@ func run() error {
 		ChatGPT: siwc.New(siwc.Options{
 			OpenBrowser: platform.NewBrowser(wapp).Open, Secrets: sec, Settings: st, Clock: clk, Logger: logger,
 		}),
-		Background:   platform.NewBackground(logger),
+		Background:   background,
 		OpenRequests: platform.NewOpenRequests(wapp, emitter),
 		Logger:       logger, DataDir: dir, Version: version, Capabilities: caps,
 		QuitAck: func() { quitter.Ack() }, RequestQuit: func() { quitter.Request() },

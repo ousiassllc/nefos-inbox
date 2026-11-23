@@ -42,6 +42,8 @@ public final class SecureStore {
     static final String MASTER_KEY_ALIAS = "hitomado_secrets_master_key";
 
     private static final String ANDROID_KEYSTORE_EXCEPTION = "android.security.KeyStoreException";
+    private static final String USER_NOT_AUTHENTICATED_EXCEPTION = "android.security.keystore.UserNotAuthenticatedException";
+    private static final String KEY_PERMANENTLY_INVALIDATED_EXCEPTION = "android.security.keystore.KeyPermanentlyInvalidatedException";
     private static final int MAX_CAUSE_DEPTH = 16;
     /** Keystore の不調かもしれない失敗の再試行回数（初回を除く）。 */
     private static final int KEYSTORE_RETRIES = 2;
@@ -292,14 +294,44 @@ public final class SecureStore {
      * 鍵の喪失と確実に言える失敗: InvalidKeyException（KeyPermanentlyInvalidatedException を含む）、
      * BadPaddingException（AEADBadTagException を含む。鍵が別物で復号できない）、UnrecoverableKeyException、
      * Tink のキーセットが壊れて読めない InvalidProtocolBufferException。
+     *
+     * <p>ただし InvalidKeyException・UnrecoverableKeyException でも、鍵が無いことを表さない Keystore の操作の失敗は含めない
+     * （{@link #isKeystoreOperationFailure}）。Android Keystore は、鍵の無効化・不在以外の失敗（KeyMint の一時的な混雑・通信失敗・
+     * システムエラー・端末のロックなど）も、Cipher.init では InvalidKeyException に（KeyStoreCryptoOperationUtils.getInvalidKeyException）、
+     * KeyStore.getKey では UnrecoverableKeyException に（AndroidKeyStoreProvider.loadAndroidKeyStoreKeyFromKeystore。
+     * 原因は android.security.KeyStoreException）包んで投げる。これを鍵の喪失とすると、一時的な不調でも再試行せず全資格情報を消してしまう（#369）。
      */
     static boolean isDefiniteKeyLoss(Throwable t) {
         int depth = 0;
         for (Throwable c = t; c != null && depth < MAX_CAUSE_DEPTH; c = c.getCause(), depth++) {
-            if (c instanceof InvalidKeyException
+            if (((c instanceof InvalidKeyException || c instanceof UnrecoverableKeyException) && !isKeystoreOperationFailure(c))
                     || c instanceof BadPaddingException
-                    || c instanceof UnrecoverableKeyException
                     || c.getClass().getName().endsWith(".InvalidProtocolBufferException")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * InvalidKeyException／UnrecoverableKeyException が、鍵が失われたことを意味しない Keystore の操作の失敗か。次のどちらか:
+     * 原因に android.security.KeyStoreException がある（一時的かどうかは {@link #hasTransientKeystoreFailure} が見る。
+     * {@link #isAmbiguousKeystoreFailure} として再試行され、続けば鍵の喪失とみなす）、または端末のロック・ユーザー認証が要る失敗
+     * （UserNotAuthenticatedException。Keystore が LOCKED／UNINITIALIZED のときに返す。鍵は残っているので消さない）。
+     * 鍵の無効化・不在は KeyPermanentlyInvalidatedException（原因が付いていても）か、原因の無い UnrecoverableKeyException
+     * （AndroidKeyStoreSpi.engineGetKey が変換したもの）で届くので、これには当たらず、確実な鍵の喪失のまま即座に作り直す。
+     */
+    private static boolean isKeystoreOperationFailure(Throwable keyFailure) {
+        String name = keyFailure.getClass().getName();
+        if (KEY_PERMANENTLY_INVALIDATED_EXCEPTION.equals(name)) {
+            return false;
+        }
+        if (USER_NOT_AUTHENTICATED_EXCEPTION.equals(name)) {
+            return true;
+        }
+        int depth = 0;
+        for (Throwable c = keyFailure.getCause(); c != null && depth < MAX_CAUSE_DEPTH; c = c.getCause(), depth++) {
+            if (ANDROID_KEYSTORE_EXCEPTION.equals(c.getClass().getName())) {
                 return true;
             }
         }

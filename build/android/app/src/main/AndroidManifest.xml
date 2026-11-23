@@ -42,6 +42,17 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- ブラウザの認可の完了ページ（127.0.0.1 の待受が返す）の「Nefos Inbox に戻る」リンクが、アプリを前面に出すための入口（#368）。
+                 singleTask なので、起動済みならこの Activity が前面に出て onNewIntent に届く（Go を起動し直さない）。
+                 URL は jp.ousias.hitomado://auth-return だけで、認可コード・state・トークンは載せない。Google への redirect_uri ではない。
+                 scheme・host は internal/callbackpage の AndroidReturnURL と同じ値（callbackpage_test.go が照合）。
+                 この種の intent-filter はここの 1 つだけ（verify-apk.sh が検査する）。docs/environment/android.md §14.2 -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="jp.ousias.hitomado" android:host="auth-return" />
+            </intent-filter>
         </activity>
 
         <provider
