@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 設定の AI の状態チップ（接続済み・未接続・つなぎ直しが必要・準備中）。色だけでなく文言で伝える。
-// ガイド C4 のステータスのピル: 文字は状態色・枠は 40%・地は 10%・--r-full（ChatGPTAccountRow の .badge と同じ定形）。
+// ガイド C4 のステータスのピル（brand-guide main b53610d の .pill）: 文字は状態色・地は 10%・枠なし・padding 3×12・--r-full。
 // off は中立（--mute）で同じ形にする。
 defineProps<{ kind: 'ok' | 'off' | 'warn' | 'wait' }>()
 </script>
@@ -14,9 +14,7 @@ defineProps<{ kind: 'ok' | 'off' | 'warn' | 'wait' }>()
   flex: none;
   display: inline-flex;
   align-items: center;
-  height: 20px;
-  padding: 0 var(--s-2);
-  border: 1px solid var(--status-border);
+  padding: 3px var(--s-3);
   border-radius: var(--r-full);
   background: var(--status-soft);
   color: var(--status-color);
@@ -27,25 +25,21 @@ defineProps<{ kind: 'ok' | 'off' | 'warn' | 'wait' }>()
 
 .status-ok {
   --status-color: var(--success);
-  --status-border: var(--success-border);
   --status-soft: var(--success-soft);
 }
 
 .status-warn {
   --status-color: var(--warning);
-  --status-border: var(--warning-border);
   --status-soft: var(--warning-soft);
 }
 
 .status-wait {
   --status-color: var(--info);
-  --status-border: var(--info-border);
   --status-soft: var(--info-soft);
 }
 
 .status-off {
   --status-color: var(--mute);
-  --status-border: color-mix(in srgb, var(--mute) 40%, transparent);
   --status-soft: color-mix(in srgb, var(--mute) 10%, transparent);
 }
 </style>

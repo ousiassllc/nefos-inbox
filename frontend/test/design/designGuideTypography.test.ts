@@ -116,6 +116,13 @@ describe('タブ先頭の題と xs の文字の行間（T4・T8・#436）', () =
     },
   )
 
+  test('AIConnectTab の説明文 .hint は sm 14・--mute（題 .sh の base 16 と差をつける）', () => {
+    const hint = rule('settings/ai/providers/AIConnectTab.vue', '.hint {')
+    expect(hint).toContain('font-size: var(--font-size-sm)')
+    expect(hint).toContain('line-height: var(--line-height-sm)')
+    expect(hint).toContain('color: var(--mute)')
+  })
+
   test.each([
     ['account/AccountItem.vue', '.email {'],
     ['thread/MessageCard.vue', '.clip {'],

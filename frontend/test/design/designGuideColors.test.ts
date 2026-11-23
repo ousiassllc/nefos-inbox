@@ -31,9 +31,10 @@ describe('識別色の地の上の文字は薄めない（C2・C6・#425）', ()
 describe('AI の状態チップは状態色のピル（C4・#405）', () => {
   const chip = 'settings/ai/providers/AIStatusChip.vue'
 
-  test('文字・枠・地は --status-* で受け、ピル（--r-full）にする', () => {
+  test('文字・地は --status-* で受け、枠なし・padding 3×12 のピル（--r-full）にする（brand-guide b53610d の .pill）', () => {
     const body = rule(chip, '.status {')
-    expect(body).toContain('border: 1px solid var(--status-border)')
+    expect(body).not.toContain('border:')
+    expect(body).toContain('padding: 3px var(--s-3)')
     expect(body).toContain('border-radius: var(--r-full)')
     expect(body).toContain('background: var(--status-soft)')
     expect(body).toContain('color: var(--status-color)')
@@ -42,16 +43,13 @@ describe('AI の状態チップは状態色のピル（C4・#405）', () => {
   test('ok は success・warn は warning（danger にしない）・wait は info の色にする', () => {
     const ok = rule(chip, '.status-ok {')
     expect(ok).toContain('--status-color: var(--success)')
-    expect(ok).toContain('--status-border: var(--success-border)')
     expect(ok).toContain('--status-soft: var(--success-soft)')
     const warn = rule(chip, '.status-warn {')
     expect(warn).toContain('--status-color: var(--warning)')
-    expect(warn).toContain('--status-border: var(--warning-border)')
     expect(warn).toContain('--status-soft: var(--warning-soft)')
     expect(warn).not.toContain('--danger')
     const wait = rule(chip, '.status-wait {')
     expect(wait).toContain('--status-color: var(--info)')
-    expect(wait).toContain('--status-border: var(--info-border)')
     expect(wait).toContain('--status-soft: var(--info-soft)')
   })
 })
