@@ -19,6 +19,7 @@ const EVENTS = {
   BEFORE_QUIT: 'app:before-quit',
   NOTIFY_OPEN_THREAD: 'notify:open-thread',
   UPDATE_AVAILABLE: 'update:available',
+  LOCAL_AI_STATUS: 'localai:status',
 } as const
 
 export const handlers = new Map<string, Handler>()

@@ -7,6 +7,7 @@ import type {
 } from '../../../../../bindings/github.com/ousiassllc/nefos-inbox/internal/app/dto'
 import { aiModelsKey } from '../../../../lib/aiConfig'
 import { list } from '../../../../lib/api'
+import { providerBaseUrl } from '../../../../lib/localAi/baseUrl'
 import { settings as msg } from '../../../../lib/messages'
 import type { SelectOption } from '../../../ui/BaseSelect.vue'
 import { AI_PROVIDERS, isConnected } from '../providers/aiProviders'
@@ -23,9 +24,9 @@ export function featureProviders(feature: AIFeatureId): string[] {
 export const featureAllowsEffort = (feature: AIFeatureId): boolean =>
   feature === 'draft' || feature === 'threadAi'
 
-/** そのプロバイダのモデル一覧の保存キー。OpenAI 互換は保存済みの Base URL ごと。 */
+/** そのプロバイダのモデル一覧の保存キー。OpenAI 互換・ローカルAI（external）は保存済みの Base URL ごと（managed は provider だけ）。 */
 export function modelsKeyFor(provider: string, cfg: AIConfig): string {
-  return aiModelsKey(provider, provider === 'openai' ? (cfg.baseUrl ?? '') : '')
+  return aiModelsKey(provider, providerBaseUrl(provider, cfg))
 }
 
 const providerName = (p: string) => msg.ai.providerList.names[p] ?? p
@@ -57,6 +58,8 @@ export function modelListFor(
 export interface ManualProvider {
   provider: string
   message?: string
+  /** 一覧を取得できなかった理由（AIModelList.reason）。`not_installed` は手入力ではなく、つなぎ先での導入を案内する（ローカルAI）。 */
+  reason?: string
 }
 
 export interface FeatureChoices {
@@ -93,7 +96,7 @@ export function featureChoices(
       continue
     }
     const listed = list(res.models)
-    if (listed.length === 0) manual.push({ provider: p, message: res.message })
+    if (listed.length === 0) manual.push({ provider: p, message: res.message, reason: res.reason })
     for (const m of listed) {
       options.push({ value: optionValue(p, m.id), label: optionLabel(p, m.id, m.displayName) })
     }

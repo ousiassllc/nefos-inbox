@@ -13,6 +13,7 @@ import type {
 import { hasProviderCredential } from '../../lib/aiConfig'
 import { call, list, parseBindingError } from '../../lib/api'
 import { keyOf, refOf } from '../../lib/inboxItems'
+import { providerBaseUrl } from '../../lib/localAi/baseUrl'
 import { inboxZero as msg, settings as settingsMsg } from '../../lib/messages'
 import { useInboxStore } from '../inbox'
 import { useSettingsStore } from '../settings'
@@ -83,7 +84,7 @@ export const useInboxZeroStore = defineStore('inboxZero', () => {
   const consentTarget = computed(() => {
     const p = selectedAI.value
     if (p === undefined) return undefined
-    const baseUrl = p === 'openai' ? (settings.aiConfig?.baseUrl ?? '') : ''
+    const baseUrl = providerBaseUrl(p, settings.aiConfig)
     return { provider: p, baseUrl }
   })
 

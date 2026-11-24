@@ -1,4 +1,5 @@
 // AI 送信先の表示用ロジック（NF §2: OpenAI 互換の Base URL を含め、送信先は常に表示する）。
+import { isLoopbackBaseUrl } from '../../../lib/localAi/baseUrl'
 import { settings as msg } from '../../../lib/messages'
 
 const ANTHROPIC_URL = 'https://api.anthropic.com'
@@ -22,7 +23,7 @@ export function providerLabel(provider: string): string {
   return msg.ai.providerOptions[provider] ?? provider
 }
 
-/** 保存済み（または入力中）のプロバイダ・Base URL から、データの送信先を決める。Base URL は openai のみ有効。 */
+/** 保存済み（または入力中）のプロバイダ・Base URL から、データの送信先を決める。Base URL は openai・local（external）のみ有効。 */
 export function aiDestination(provider: string, baseUrl?: string): AIDestination {
   const label = providerLabel(provider)
   if (provider === 'chatgpt') {
@@ -38,6 +39,18 @@ export function aiDestination(provider: string, baseUrl?: string): AIDestination
     return custom
       ? { providerLabel: label, url: custom, custom: true }
       : { providerLabel: label, url: OPENAI_DEFAULT_URL, custom: false }
+  }
+  if (provider === 'local') {
+    // ローカルAI（external）の送信先は保存した Base URL だけ（既定は無い）。managed は PC の外へ送らない。
+    const url = (baseUrl ?? '').trim()
+    const t = msg.ai.local
+    const note =
+      url === ''
+        ? t.externalUnsetNote
+        : isLoopbackBaseUrl(url)
+          ? t.externalLoopbackNote
+          : t.externalRemoteNote
+    return { providerLabel: label, url: url || t.destinationUnset, custom: url !== '', note }
   }
   if (provider === 'typesafe') return { providerLabel: label, url: TYPESAFE_URL, custom: false }
   return { providerLabel: label, url: ANTHROPIC_URL, custom: false }

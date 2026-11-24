@@ -9,6 +9,7 @@ import BaseButton from '../../../ui/BaseButton.vue'
 import AISettings from '../AISettings.vue'
 import ChatGPTPlanNotice from '../ChatGPTPlanNotice.vue'
 import AIFeaturesTab from '../features/AIUseTab.vue'
+import AILocalPage from '../local/AILocalPage.vue'
 import AIConnectTab from './AIConnectTab.vue'
 import AITypeSafePage from './AITypeSafePage.vue'
 import { AI_PROVIDERS, type AIProviderId, isConnected, providerKind } from './aiProviders'
@@ -63,6 +64,7 @@ watch(
         </BaseButton>
       </div>
       <AITypeSafePage v-if="kind === 'key'" :key="page" />
+      <AILocalPage v-else-if="kind === 'local'" :key="page" />
       <AISettings v-else :key="page" :provider="page" />
     </template>
     <template v-else>

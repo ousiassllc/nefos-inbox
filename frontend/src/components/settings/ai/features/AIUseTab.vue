@@ -2,6 +2,7 @@
 import { MagicWand } from '@iconoir/vue'
 import { computed, onMounted, watch } from 'vue'
 import { parseBindingError } from '../../../../lib/api'
+import { providerBaseUrl } from '../../../../lib/localAi/baseUrl'
 import { settings as msg } from '../../../../lib/messages'
 import { useSettingsStore } from '../../../../stores/settings'
 import { useUiStore } from '../../../../stores/ui'
@@ -38,7 +39,7 @@ async function loadModels(): Promise<void> {
   await Promise.all(
     connectedModelProviders.value.map(async (p) => {
       try {
-        await store.loadAIModels(p, p === 'openai' ? (c.baseUrl ?? '') : '')
+        await store.loadAIModels(p, providerBaseUrl(p, c))
       } catch (e) {
         store.aiModels = {
           ...store.aiModels,
@@ -48,8 +49,12 @@ async function loadModels(): Promise<void> {
     }),
   )
 }
-// つないであるプロバイダ（と OpenAI 互換の Base URL）が変わったら取り直す。
-watch(() => [connectedModelProviders.value.join(','), cfg.value?.baseUrl], () => void loadModels(), { immediate: true })
+// つないであるプロバイダ（と OpenAI 互換・ローカルAI（external）の Base URL・ローカルAIのつなぎ方）が変わったら取り直す。
+watch(
+  () => [connectedModelProviders.value.join(','), cfg.value?.baseUrl, cfg.value?.local?.mode, cfg.value?.local?.baseUrl],
+  () => void loadModels(),
+  { immediate: true },
+)
 onMounted(() => {
   if (cfg.value === undefined) void store.load()
 })

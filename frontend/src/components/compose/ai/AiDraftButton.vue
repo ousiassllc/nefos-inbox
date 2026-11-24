@@ -3,6 +3,7 @@ import { InfoCircle, MagicWand, WarningCircle } from '@iconoir/vue'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId, watch } from 'vue'
 import { useAiDraft } from '../../../composables/useAiDraft'
 import { instructionLength, MAX_INSTRUCTION_CHARS } from '../../../lib/aiInstruction'
+import { providerBaseUrl } from '../../../lib/localAi/baseUrl'
 import { common, compose as msg, settings as settingsMsg } from '../../../lib/messages'
 import { hasUserBody } from '../../../lib/signature'
 import { useComposeStore } from '../../../stores/compose'
@@ -12,6 +13,7 @@ import AIConsentDialog from '../../settings/ai/AIConsentDialog.vue'
 import AISetupDialog from '../../settings/ai/AISetupDialog.vue'
 import { aiDestination } from '../../settings/ai/aiDestination'
 import { draftPrecheckConfig } from '../../settings/ai/aiPrecheckConfig'
+import LocalAiWaitNote from '../../settings/ai/local/LocalAiWaitNote.vue'
 import BaseButton from '../../ui/BaseButton.vue'
 import BaseDialog from '../../ui/BaseDialog.vue'
 import Spinner from '../../ui/Spinner.vue'
@@ -36,8 +38,8 @@ onMounted(() => {
 const ai = useAiDraft({
   config: () => draftPrecheckConfig(settings.aiConfig),
   hasBody: () => hasUserBody(compose.content.bodyHtml),
-  // 同意は、保存済みの設定の送信先（OpenAI 互換は Base URL も）に対して記録する。
-  recordConsent: (provider) => settings.recordAIConsent(provider, settings.aiConfig?.baseUrl ?? ''),
+  // 同意は、保存済みの設定の送信先（OpenAI 互換・ローカルAI（external）は Base URL も）に対して記録する。
+  recordConsent: (provider) => settings.recordAIConsent(provider, providerBaseUrl(provider, settings.aiConfig)),
   generate: (requestId) =>
     props.newMail
       ? settings.generateNewDraft(props.sessionId, requestId, compose.aiInstruction, {
@@ -76,12 +78,14 @@ watch(
 
 const destination = computed(() => {
   const c = settings.aiConfig
-  return c ? aiDestination(c.features.draft.provider, c.baseUrl) : undefined
+  return c ? aiDestination(c.features.draft.provider, providerBaseUrl(c.features.draft.provider, c)) : undefined
 })
 
-// 「AI で下書き」に選んだのが ChatGPT プランのときだけ、ログインの案内にする（案内文の出し分けだけに使う）。
-const usingChatGPT = computed(() => settings.aiConfig?.features.draft.provider === 'chatgpt')
-const needText = computed(() => (usingChatGPT.value ? msg.ai.needLogin : msg.ai.needKey))
+// 「AI で下書き」に選んだのが ChatGPT プラン・ローカルAIのときだけ、案内文を出し分ける（案内文の出し分けだけに使う）。
+const draftProvider = computed(() => settings.aiConfig?.features.draft.provider)
+const needText = computed(() =>
+  draftProvider.value === 'chatgpt' ? msg.ai.needLogin : draftProvider.value === 'local' ? msg.ai.needLocal : msg.ai.needKey,
+)
 // 無効なボタンの理由は title（OS 標準のツールチップ）ではなく、見えている .ai-note をボタンにつなぐ（#264）。
 const noteId = useId()
 
@@ -111,6 +115,7 @@ const busy = computed(() => compose.sending || compose.preview !== undefined)
       </BaseButton>
       <template v-else>
         <span class="ai-progress" role="status"><Spinner /> {{ msg.ai.generating }}</span>
+        <LocalAiWaitNote :provider="draftProvider" />
         <BaseButton size="sm" variant="secondary" @click="ai.cancel()">{{ msg.ai.cancel }}</BaseButton>
       </template>
       <template v-if="ai.needsKey.value">

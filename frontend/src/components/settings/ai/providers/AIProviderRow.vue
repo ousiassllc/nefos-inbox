@@ -23,12 +23,14 @@ const chipKind = computed(
   () => ({ connected: 'ok', disconnected: 'off', reconnect: 'warn' })[state.value] as 'ok' | 'off' | 'warn',
 )
 const name = computed(() => msg.ai.providerList.names[props.id] ?? props.id)
+const isLocal = computed(() => props.id === 'local')
 const connectLabel = computed(() => {
   if (consentPending.value) return t.consent
   return props.id === 'chatgpt' ? t.login : t.addKey
 })
 const note = computed(() => {
   if (consentPending.value) return t.consentNote
+  if (isLocal.value) return msg.ai.local.rowNote
   if (props.id === 'typesafe') return t.typesafeNote
   if (props.id === 'chatgpt' && state.value === 'connected') return store.aiConfig?.chatgptEmail
   return undefined
@@ -46,7 +48,11 @@ const note = computed(() => {
       <p v-if="note" class="note">{{ note }}</p>
     </div>
     <div class="actions">
-      <template v-if="state === 'connected'">
+      <!-- ローカルAIは API キーもログインも無い（導入・つなぎ方の設定だけ）。常に「設定」でページを開き、「接続を外す」は無い。 -->
+      <BaseButton v-if="isLocal" variant="secondary" size="sm" :disabled="busy" :data-testid="`ai-provider-open-${id}`" :aria-label="msg.ai.providerList.open(name)" @click="emit('open')">
+        {{ t.manage }}
+      </BaseButton>
+      <template v-else-if="state === 'connected'">
         <BaseButton variant="ghost" size="sm" :disabled="busy" :data-testid="`ai-provider-open-${id}`" :aria-label="msg.ai.providerList.open(name)" @click="emit('open')">
           {{ t.manage }}
         </BaseButton>

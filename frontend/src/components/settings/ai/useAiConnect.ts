@@ -3,6 +3,7 @@
 import { computed, type Ref } from 'vue'
 import { hasProviderCredential } from '../../../lib/aiConfig'
 import { parseBindingError } from '../../../lib/api'
+import { providerBaseUrl } from '../../../lib/localAi/baseUrl'
 import { settings as msg } from '../../../lib/messages'
 import { useSettingsStore } from '../../../stores/settings'
 import { useUiStore } from '../../../stores/ui'
@@ -40,8 +41,8 @@ export function useAiConnect(deps: AiConnectDeps) {
   const cfg = computed(() => store.aiConfig)
   const isChatGPT = computed(() => provider.value === 'chatgpt')
   const hasCredential = computed(() => hasProviderCredential(provider.value, cfg.value))
-  /** 保存済みの Base URL（openai だけ）。同意はこの送信先に対して取る。 */
-  const baseUrl = computed(() => (provider.value === 'openai' ? (cfg.value?.baseUrl ?? '') : ''))
+  /** 保存済みの Base URL（openai・ローカルAI（external）だけ）。同意はこの送信先に対して取る。 */
+  const baseUrl = computed(() => providerBaseUrl(provider.value, cfg.value))
   const consented = computed(() => (cfg.value?.consentedProviders ?? []).includes(provider.value))
   const destination = computed(() => aiDestination(provider.value, baseUrl.value))
   const consentText = computed(() => {

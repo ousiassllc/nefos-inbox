@@ -4,10 +4,10 @@ import type {
 } from '../../bindings/github.com/ousiassllc/nefos-inbox/internal/app/dto'
 import { list } from './api'
 
-/** モデル一覧の保存キー。OpenAI 互換は Base URL ごとに別の一覧になる（Base URL が空の既定の送信先は、プロバイダ名だけ）。 */
+/** モデル一覧の保存キー。OpenAI 互換・ローカルAI（external）は Base URL ごとに別の一覧になる（Base URL が空の既定の送信先・managed は、プロバイダ名だけ）。 */
 export function aiModelsKey(provider: string, baseUrl = ''): string {
   const url = baseUrl.trim()
-  return provider === 'openai' && url !== '' ? `${provider}|${url}` : provider
+  return ['openai', 'local'].includes(provider) && url !== '' ? `${provider}|${url}` : provider
 }
 
 /** Go は consentedProviders・apiKeyProviders・chatgptAccounts を nil にし得るので、画面側は常に配列として扱う。 */
@@ -20,9 +20,10 @@ export function normalizeAIConfig(c: AIConfig): AIConfig {
   }
 }
 
-/** そのプロバイダの資格情報を持っているか（ChatGPT はログイン、ほかは API キー）。 */
+/** そのプロバイダの資格情報を持っているか（ChatGPT はログイン、ローカルAI（#458）は API キーが要らないので使える状態 `local.ready`、ほかは API キー）。 */
 export function hasProviderCredential(id: string, cfg?: AIConfig): boolean {
   if (id === 'chatgpt') return cfg?.chatgptSignedIn ?? false
+  if (id === 'local') return cfg?.local?.ready ?? false
   return cfg?.apiKeyProviders?.includes(id) ?? false
 }
 
@@ -38,6 +39,7 @@ export function effortChoices(
   model: string,
   models: AIModelList | undefined,
 ): string[] {
+  if (provider === 'local') return [] // ローカルAIはエフォートを使わない
   if (provider !== 'anthropic') return COMMON_EFFORTS
   return list(list(models?.models).find((m) => m.id === model.trim())?.efforts)
 }

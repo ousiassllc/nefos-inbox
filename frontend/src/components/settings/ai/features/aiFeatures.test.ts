@@ -106,7 +106,9 @@ describe('機能ごとの選択肢（#376）', () => {
       },
     }
     const c = featureChoices('draft', connected, failed, none)
-    expect(c.manual).toEqual([{ provider: 'openai', message: '取得機能がありません' }])
+    expect(c.manual).toEqual([
+      { provider: 'openai', message: '取得機能がありません', reason: 'unsupported' },
+    ])
     expect(c.options.map((o) => o.value)).toEqual(['chatgpt|gpt-plan'])
     expect(featureChoices('draft', connected, { chatgpt: models.chatgpt }, none).loading).toBe(true)
   })
