@@ -97,7 +97,8 @@ nefos-inbox/
 │  ├─ oauth/               # ループバック＋PKCE フロー
 │  ├─ store/               # sqlc 生成コード・クエリ・goose マイグレーション
 │  ├─ secrets/             # 資格情報ストア（interface＋keyring 実装）
-│  ├─ ai/                  # Provider interface と 3 実装（anthropic、openai 互換、chatgpt＝Responses API）、モデル一覧、エフォート、Classifier（jev.go＝TypeSafe AI、chatclassifier.go＝チャット系。Inbox Zero の判定）
+│  ├─ ai/                  # Provider interface と 4 実装（anthropic、openai 互換、chatgpt＝Responses API、local＝ローカルAI〔OpenAI 互換の Chat Completions。API キー任意・タイムアウト長め。#458〕）、モデル一覧、エフォート、Classifier（jev.go＝TypeSafe AI、chatclassifier.go＝チャット系。Inbox Zero の判定）
+│  ├─ localai/             # ローカルAI（Ollama。Windows のみ。#458）の管理（固定版の導入・起動と停止・モデルの取得・使えない PC の判定。`Manager.Acquire`）。生成は ai/ が行う
 │  ├─ siwc/                # Sign in with ChatGPT（動的登録・PKCE・トークンの保持と更新）
 │  ├─ callbackpage/        # 認可（OAuth・Sign in with ChatGPT）の 127.0.0.1 待受が返す完了ページ
 │  ├─ capability/          # OS ごとの機能の有無（Capabilities。Desktop／Android）
@@ -163,6 +164,8 @@ Windows 版は新しい版を自動でダウンロードして入れ替える。
 | 下書き | **Gmail の下書き**（`users.drafts`） | ローカルに保存しない。例外: 送信元未選択の新規作成はメモリのみ |
 | ログ | `%APPDATA%\Nefos Inbox\logs\`（JSON Lines。5 MB×5 世代・30 日） | NF-S10 |
 | MCP トークン | Windows 資格情報マネージャー（`nefos-inbox/mcp_token`。Android は上と同じ暗号化ストア） | NF-S13 |
+| ローカルAI（Ollama）の本体・モデル（managed。#458） | `%LOCALAPPDATA%\Nefos Inbox\localai\ollama\`（`os.UserCacheDir()` 配下。`downloads\`〔導入中の zip。展開後に消す〕・`runtime\`〔`ollama.exe` と `VERSION`〕・`models\`〔`OLLAMA_MODELS`〕） | 数 GB になるため、ローミングの `%APPDATA%` ではなく Local に置く。「ローカルAIを削除」で丸ごと消える |
+| Ollama の鍵ファイル（Ollama 自身が作る。#458） | `%USERPROFILE%\.ollama\id_ed25519` | Ollama が初回の起動で作る（Nefos Inbox は読み書きしない）。「ローカルAIを削除」でも消さない |
 
 ## 7. 通信フロー
 
@@ -417,6 +420,45 @@ sequenceDiagram
 
 判定とアーカイブは分かれていて、Go の `FindInboxZeroCandidates` は候補を返すだけである。アーカイブは利用者が一覧で確認して Yes を押したときに、通常のアーカイブ（F-04）と同じ `InboxService.Archive`／`Unarchive` で行う。選んだ AI の 401／403・429・ChatGPT プランの利用枠の上限・対象外は全体を止め、それ以外の 1 スレッドの失敗は `skipped` に数えて続ける。中止（`CancelGenerate`）は `CANCELLED` で結果を捨てる。送信先は選んだ AI のもの（Jev は `api.typesafe.ai` で固定）で、同意はそのプロバイダ＋送信先ごとに保存する（[非機能要件 §2](../requirements/non-functional.md#2-プライバシー外部通信)）。契約は [バインディング仕様 §6.3](../api/endpoints.md#63-inbox-zerofindinboxzerocandidates314)。
 
+### 7.8 ローカルAI（導入から生成まで。#458）
+
+Windows でだけ使える。アプリが用意する Ollama（managed）を、導入 → モデルの取得 → 生成の順に使う。ここで動くのは `internal/localai` の `Manager` で、生成そのもの（OpenAI 互換の Chat Completions）は `ai` の `local` プロバイダが行う。契約は [バインディング仕様 §6.4](../api/endpoints.md#64-localaiserviceローカルaiollamaの管理windows-のみ458)。
+
+```mermaid
+sequenceDiagram
+  participant FE as フロント
+  participant LS as LocalAIService
+  participant MG as localai.Manager
+  participant GH as github.com
+  participant OL as ollama.exe serve（127.0.0.1:ポート）
+  participant AI as AIService
+  FE->>LS: InstallLocalAI()（「Ollama を導入」。ボタン押下のみ）
+  LS->>MG: StartInstall（ジョブは 1 つ）
+  MG->>MG: 空き容量の確認（ダウンロード＋展開後＋1 GiB）
+  MG->>GH: 固定版 v0.40.17 の zip（HTTPS・github.com／*.githubusercontent.com のみ）
+  MG->>MG: サイズ・SHA-256 の照合 → runtime.tmp-* へ展開（zip-slip 拒否）→ runtime\ へ rename
+  MG-->>FE: localai:status（段階・進捗。250ms に 1 回まで。「中止」は CancelLocalAIJob）
+  FE->>LS: PullLocalAIModel(name)（「取得」。カタログの 3 モデルだけ）
+  LS->>MG: StartPull（空き容量の確認: モデルの大きさ＋1 GiB）
+  MG->>OL: Acquire（未起動なら起動。OLLAMA_HOST=127.0.0.1:空きポート・OLLAMA_NO_CLOUD=1 ほか。/api/version が 200 になるまで最長 60 秒）
+  MG->>OL: POST /api/pull（NDJSON。digest ごとの completed を合計して進捗にする）
+  OL->>OL: registry.ollama.ai からモデルを取得（Ollama のプロセスが通信する）
+  MG-->>FE: localai:status（進捗・完了。中止は接続を閉じる。取り直すと続きから）
+  FE->>AI: GenerateReplyDraft など（provider = local）
+  AI->>MG: Acquire（必要なら起動。接続先の Base URL を受け取る）
+  AI->>OL: POST /v1/chat/completions（Authorization なし・300 秒）
+  OL-->>AI: choices[0].message.content
+  AI->>MG: release（使い終わり）
+  Note over MG,OL: 最後の release から 10 分、StopLocalAI、アプリ終了で止める（Job Object により異常終了でも子ごと止まる）
+```
+
+- **managed の流れ**: `Acquire` は未起動のときだけ `ollama.exe serve` を起動し、使用中の数を数える。生成が終わると release し、最後の利用から 10 分でアイドル停止する。モデルのメモリは `OLLAMA_KEEP_ALIVE=5m` で先に降りる。常駐はしない。取得済みの判定は Ollama を起動せず、`models\manifests\registry.ollama.ai\library\<名前>\<タグ>` のファイルの有無で行う（画面の状態表示で Ollama を起こさない）
+- **external の流れ**: Base URL（利用者が指定した、すでに動いているサーバー）へ直接生成し、`Manager` は使わない。API キーは任意で、ある場合だけ `Authorization` を付ける
+- **同意**: 送信先が loopback（managed、または external の `localhost`／`127.0.0.1`／`::1`）なら、メールの内容が PC の外へ出ないので同意を取らない。loopback 以外の external だけ、`openai` と同じく「プロバイダ＋送信先」の同意を取る（`AI_CONSENT_REQUIRED`）。同意の保存は F-08 の `app_settings.ai.consent` を使う
+- **使えない PC**: `Manager.Support` が Windows 以外・ARM64 の Windows（x64 エミュレーションでも。`IsWow64Process2`）・Windows 10 22H2（build 19045）より古い・物理メモリ 8 GB 未満を判定し、その理由（日本語 1 文）を `LocalAIStatus.unsupportedReason` として返す
+- **ジョブの失敗**: 通信・サイズ不一致・SHA-256 の不一致・展開の拒否・起動の失敗などは、途中のファイルを消して `LocalAIStatus.lastError` に日本語 1 文で残す（次のジョブで消える）。Ollama の標準出力・標準エラーは捨て、末尾 4 KiB だけメモリに持つ（ファイルに書かない。メール本文・プロンプト・応答はログに出さない。NF-S10）
+- Windows での動作（Job Object・`CREATE_NO_WINDOW`・`IsWow64Process2`・Ollama の起動と取得）は、Linux 上の Ollama v0.40.17 の動作確認（`/api/version`・Host ヘッダ検査・`OLLAMA_NO_CLOUD`・`/api/pull` の NDJSON・`/v1/chat/completions`）に基づくもので、**実機の Windows では未確認**
+
 ## 8. 主要な設計判断
 
 | 判断 | 採用 | 理由・トレードオフ |
@@ -430,6 +472,7 @@ sequenceDiagram
 | インライン画像（`cid:`） | Go が取得して `data:` URL に埋め込んで表示用 HTML を返す。画像 1 枚 5 MiB 超は取得せず、1 メッセージの `data:` URL 合計 10 MiB（`appcore.MaxInlineDataBytes`）を超える参照は `cid:` のまま残し、表示されない（通知なし。[F-03](../requirements/functional.md)） | 既定の表示は `img-src data:` のみで足りる。リモート画像は既定でブロックし、「画像を表示」を押したメッセージだけ WebView が HTTPS で直接取得する（**外部通信の例外**。`srcdoc` の iframe は親の CSP を継承するため、ホストの CSP に `img-src https:` が必要。取得先はメール本文が指定したホストで、本アプリ側のサーバーへの通信ではない） |
 | OAuth クライアント | 複数登録・アカウントごとに選択 | Workspace の「内部」アプリは他社アカウントで使えないため（F-01） |
 | 作成セッション | `ComposeService` が返信・転送・新規のセッション（送信元・スレッド・元メッセージ・添付・下書き ID）をメモリに保持する。フロントは本文などの入力内容のみ都度渡す | 送信元の整合・転送の元添付引き継ぎ・`In-Reply-To`／`References` を Go 側で完結できる。セッションの管理と破棄（最終操作から 24 時間）が必要。契約は [バインディング仕様 §5・§9](../api/endpoints.md#5-composeservice) |
+| ローカルAI | Ollama だけを管理する（llama.cpp などの他のランタイムは扱わない）。生成は OpenAI 互換の Chat Completions（`POST {base}/chat/completions`）で、既存の `openai` 互換の経路と同じ形にする。置き場所は `%LOCALAPPDATA%`（`os.UserCacheDir()`）。送信先が loopback のときは同意を取らない（#458） | 導入・起動・取得の実装を 1 つ（Ollama）に絞り、検証と保守の範囲を小さくする。Ollama は OpenAI 互換の API を持ち、external（LM Studio など）とも同じ生成経路を共有できる。数 GB のモデルをローミング同期されうる `%APPDATA%` に置くと、他の PC へ複製されたりプロファイルが肥大化したりするため Local に置く。loopback の送信先ではメールの内容が PC の外へ出ないので、同意は意味を持たない（loopback 以外の external は同意を取る）。トレードオフ: ランタイムの選択肢が無く、Ollama の更新は固定版（v0.40.17）の更新に合わせて埋め込みのサイズ・SHA-256 を更新する必要がある。Ollama の API は認証を持たない（NF-S16。127.0.0.1 のランダムなポートだけで待ち受け、Ollama 自身の Host ヘッダ検査に任せる） |
 
 ## 9. ビルド・CI
 
@@ -478,3 +521,4 @@ sequenceDiagram
 | 1.34 | 2026-11-15 | §7.4・§7.5・§7.6 で、要約・質問の AI の選択を `ai.features.draft` から専用の `ai.features.threadAi`（「要約・質問」）に改めた（未選択なら `draft` へ切り替えず `AI_NOT_CONFIGURED`）。マイグレーション `00003_ai_thread_feature` が `draft` の選択を `threadAi` へ写す（`00002` を適用済みの DB でも効く） | #376 |
 | 1.35 | 2026-11-18 | §7.2 の同期のシーケンス図に、新着通知の対象（設定「通知するメール」。既定は「メインだけ」）を追記した | #395 |
 | 1.36 | 2026-11-19 | 内部の名前を `nefos-inbox` にそろえた（保存先 `%APPDATA%\Nefos Inbox`・資格情報・exe・配布ファイル名・Go モジュール）。更新確認は新しい名前のインストーラーを探す（旧名の添付も Release に付ける） | #402 |
+| 1.37 | 2026-11-24 | ローカルAI（Ollama。Windows のみ）を追加（#458）: ディレクトリ構成に `internal/localai`、§6 のデータの置き場所に `%LOCALAPPDATA%\Nefos Inbox\localai\ollama\{downloads,runtime,models}` と Ollama 自身が作る `%USERPROFILE%\.ollama` の鍵、§7.8 に導入 → 取得 → 生成の流れ（`Acquire`／アイドル停止）、§8 に設計判断（Ollama だけ・OpenAI 互換・`%LOCALAPPDATA%`・loopback は同意なし）を追記。`ai` の実装を 4 つ（`local` を追加）に更新 | #458 |
