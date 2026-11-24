@@ -64,6 +64,7 @@ describe('AISettings', () => {
       consentedProviders: [],
       chatgptSignedIn: false,
       chatgptAccounts: [],
+      local: { mode: 'managed', baseUrl: '', ready: false },
     }
     settings.aiConfig = cfg
     const w = mount(AISettings, { props: { provider: 'openai' }, global: { plugins: [pinia] } })
@@ -133,6 +134,7 @@ const ANDROID_CAPS: Capabilities = {
   supportsWindowState: false,
   singleInstance: false,
   touchUi: true,
+  supportsLocalAi: false,
 }
 
 describe('SettingsDialog（Android: 機能が無い OS）', () => {

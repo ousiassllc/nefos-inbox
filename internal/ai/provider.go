@@ -26,8 +26,9 @@ const (
 	defaultHTTPTimeout = 2 * time.Minute
 )
 
-// New は provider（anthropic／openai／chatgpt）に応じた Provider を返す。baseURL は openai（互換エンドポイント）のみ
-// 有効で、空なら OpenAI 既定。anthropic・chatgpt では無視される。chatgpt の apiKey は OAuth アクセストークン。
+// New は provider（anthropic／openai／chatgpt／local）に応じた Provider を返す。baseURL は openai（互換エンドポイント）と local のみ
+// 有効で、openai は空なら OpenAI 既定、local は必須。anthropic・chatgpt では無視される。chatgpt の apiKey は OAuth アクセストークン。
+// local の apiKey は任意（空なら Authorization ヘッダを付けない）。
 func New(provider, model, baseURL, apiKey string) (Provider, error) {
 	if provider == ProviderAnthropic || provider == ProviderChatGPT {
 		baseURL = ""
@@ -35,7 +36,7 @@ func New(provider, model, baseURL, apiKey string) (Provider, error) {
 	return NewWithClient(provider, model, baseURL, apiKey, nil)
 }
 
-// NewHTTPClient は既定の http.Client を返す（NewWithClient・ListModels の hc が nil のときに使う。テストからも使う）。
+// NewHTTPClient は既定の http.Client を返す（NewWithClient・ListModels の hc が nil のときに使う。テストからも使う。local は httpClientFor で Timeout を 10 分にする）。
 // リダイレクトは追従しない。307／308 は POST の本文ごと別ホスト・別 scheme へ再送されるため、
 // 同意・検証済みの送信先（scheme＋ホスト）以外にスレッド内容が届き得る。3xx は ErrFailed になる。
 func NewHTTPClient() *http.Client {
@@ -52,7 +53,7 @@ func NewWithClient(provider, model, baseURL, apiKey string, hc *http.Client) (Pr
 		return nil, errors.New("ai: モデルが指定されていません")
 	}
 	if hc == nil {
-		hc = NewHTTPClient()
+		hc = httpClientFor(provider)
 	}
 	c := client{hc: hc, model: model, apiKey: apiKey}
 	switch provider {
@@ -77,6 +78,16 @@ func NewWithClient(provider, model, baseURL, apiKey string, hc *http.Client) (Pr
 		}
 		c.base = base
 		return &chatGPT{client: c}, nil
+	case ProviderLocal:
+		if err := requireLocalBase(provider, baseURL); err != nil {
+			return nil, err
+		}
+		base, err := normalizeBase(baseURL, "")
+		if err != nil {
+			return nil, err
+		}
+		c.base = base
+		return &openAI{client: c}, nil
 	default:
 		return nil, fmt.Errorf("ai: 未対応のプロバイダです: %q", provider)
 	}

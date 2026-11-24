@@ -7,6 +7,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/ousiassllc/nefos-inbox/internal/ai"
+	"github.com/ousiassllc/nefos-inbox/internal/app/aicore/aiinput"
 	"github.com/ousiassllc/nefos-inbox/internal/app/apperr"
 	"github.com/ousiassllc/nefos-inbox/internal/app/dto"
 )
@@ -39,7 +40,7 @@ func (s *Service) AskAboutThread(ctx context.Context, ref dto.ThreadRef, request
 	if utf8.RuneCountInString(question) > ai.MaxQuestionRunes {
 		return dto.ThreadAIResult{}, apperr.New(apperr.Validation, fmt.Sprintf("質問は %d 文字までです。", ai.MaxQuestionRunes))
 	}
-	turns, err := validateHistory(history)
+	turns, err := aiinput.ValidateHistory(history)
 	if err != nil {
 		return dto.ThreadAIResult{}, err
 	}
@@ -54,38 +55,6 @@ func validateRequestID(requestID string) error {
 		return apperr.New(apperr.Validation, "リクエスト ID が必要です。")
 	}
 	return nil
-}
-
-// validateHistory は会話の形と長さを検証して ai.ThreadTurn にする。nil・空は空の会話。
-// 形: user から始まり assistant で終わる交互の並びで、text は空でない。長さ: 20 件（10 往復）以内・text の合計 20,000 文字以内。
-func validateHistory(history []dto.ThreadAITurn) ([]ai.ThreadTurn, error) {
-	bad := func(msg string) error { return apperr.New(apperr.Validation, msg) }
-	if len(history) > ai.MaxHistoryTurns {
-		return nil, bad("会話が長すぎます（最新の 10 往復までです）。")
-	}
-	if len(history)%2 != 0 {
-		return nil, bad("会話の形が正しくありません（質問と回答が対になっている必要があります）。")
-	}
-	turns := make([]ai.ThreadTurn, len(history))
-	total := 0
-	for i, t := range history {
-		want := ai.RoleUser
-		if i%2 == 1 {
-			want = ai.RoleAssistant
-		}
-		if t.Role != want {
-			return nil, bad("会話の形が正しくありません（質問と回答が交互である必要があります）。")
-		}
-		if strings.TrimSpace(t.Text) == "" {
-			return nil, bad("会話の形が正しくありません（空の発言があります）。")
-		}
-		total += utf8.RuneCountInString(t.Text)
-		turns[i] = ai.ThreadTurn{Role: t.Role, Text: t.Text}
-	}
-	if total > ai.MaxHistoryRunes {
-		return nil, bad("会話が長すぎます（合計 20,000 文字までです）。")
-	}
-	return turns, nil
 }
 
 // runThreadAI は要約・質問に共通の流れ（前提の確認→スレッドの取得→プロバイダの呼び出し）を行う。
@@ -129,7 +98,7 @@ func (s *Service) buildThreadInput(ctx context.Context, ref dto.ThreadRef) (ai.T
 	if err != nil {
 		return ai.ThreadInput{}, 0, err
 	}
-	msgs := contextMessages(thread)
+	msgs := aiinput.ContextMessages(thread)
 	return ai.ThreadInput{
 		AccountDisplayName: acct.DisplayName,
 		AccountEmail:       acct.Email,

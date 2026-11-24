@@ -24,7 +24,7 @@ type completer interface {
 type chatClassifier struct{ c completer }
 
 // NewClassifierFor は provider の Classifier を返す。typesafe は Jev（model・baseURL は使わない）、
-// それ以外（anthropic／openai／chatgpt）は選んだモデルのチャットで分類する。baseURL は openai のみ有効（空は既定の送信先）。
+// それ以外（anthropic／openai／chatgpt／local）は選んだモデルのチャットで分類する。baseURL は openai・local のみ有効（openai の空は既定の送信先、local は必須）。
 func NewClassifierFor(provider, model, baseURL, apiKey string) (Classifier, error) {
 	if provider == ProviderTypeSafe {
 		return NewClassifier(apiKey), nil

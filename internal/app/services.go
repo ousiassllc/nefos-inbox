@@ -13,6 +13,8 @@ type Services struct {
 	Thread  *ThreadService
 	Compose *ComposeService
 	AI      *AIService
+	// LocalAI はローカルAI（Ollama。#458）。Deps.LocalAI が nil なら全メソッドが UNSUPPORTED。登録は capability.SupportsLocalAI の OS だけ。
+	LocalAI *LocalAIService
 	App     *AppService
 	Log     *LogService
 	MCP     *MCPService
@@ -32,6 +34,7 @@ func NewServices(d *Deps) *Services {
 		Thread:  NewThreadService(d),
 		Compose: compose,
 		AI:      NewAIService(d, compose),
+		LocalAI: NewLocalAIService(d),
 		App:     NewAppService(d),
 		Log:     NewLogService(d),
 		MCP:     NewMCPService(d, mcpcore.New((*deps.Deps)(d), inbox)),

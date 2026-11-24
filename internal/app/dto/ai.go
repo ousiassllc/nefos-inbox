@@ -12,7 +12,7 @@ const (
 // AIFeatureSetting は機能 1 つで使う AI・モデルの選択（#376）。保存した値をそのまま返し、つないでいるかは確かめない
 // （つないでいない AI を選んでいても、選択は残す。画面が「つなぎ直しが必要」を出す）。
 type AIFeatureSetting struct {
-	// Provider は選んだプロバイダ（anthropic／openai／chatgpt。Inbox Zero は typesafe も）。空は未選択。
+	// Provider は選んだプロバイダ（anthropic／openai／chatgpt／local。Inbox Zero は typesafe も）。空は未選択。
 	Provider string `json:"provider"`
 	// Model は選んだモデル。typesafe（モデルを選ばない）と未選択は空。
 	Model string `json:"model"`
@@ -35,16 +35,18 @@ type AIConfig struct {
 	BaseURL string `json:"baseUrl,omitempty"`
 	// Features は機能ごとに使う AI・モデル。
 	Features AIFeatures `json:"features"`
-	// APIKeyProviders は API キーを登録済みのプロバイダ（anthropic／openai／typesafe。chatgpt は ChatGPTSignedIn）。null にしない。
+	// APIKeyProviders は API キーを登録済みのプロバイダ（anthropic／openai／typesafe／local（任意のキー）。chatgpt は ChatGPTSignedIn）。null にしない。
 	APIKeyProviders []string `json:"apiKeyProviders"`
-	// ConsentedProviders は送信先への同意済みのプロバイダ（anthropic／openai／chatgpt／typesafe）。
-	// openai は現在の Base URL の送信先への同意だけが有効。null にしない。
+	// ConsentedProviders は送信先への同意済みのプロバイダ（anthropic／openai／chatgpt／typesafe／local）。
+	// openai・local は現在の Base URL の送信先への同意だけが有効。local は送信先が loopback（managed、または localhost などの external）なら同意なしで含める。null にしない。
 	ConsentedProviders []string `json:"consentedProviders"`
 	// ChatGPTSignedIn は使用中の ChatGPT アカウントがログイン済みか。ChatGPTEmail はそのメールアドレス（表示用）。
 	ChatGPTSignedIn bool   `json:"chatgptSignedIn"`
 	ChatGPTEmail    string `json:"chatgptEmail,omitempty"`
 	// ChatGPTAccounts は保存済みの ChatGPT アカウント（登録順。トークンは含まない）。
 	ChatGPTAccounts []ChatGPTAccount `json:"chatgptAccounts"`
+	// Local はローカルAI（Ollama。#458）のつなぎ方。capability が無い OS でも返す（Ready は false）。
+	Local AILocalConnection `json:"local"`
 }
 
 // ChatGPTAccount は保存済みの ChatGPT アカウント（クライアント登録）1 件。
@@ -81,6 +83,7 @@ const (
 	AIModelsNoCredentials   = "no_credentials"   // API キー未登録・ChatGPT 未ログイン
 	AIModelsConsentRequired = "consent_required" // 送信先への同意前（取得も送らない）
 	AIModelsInvalidBaseURL  = "invalid_base_url" // Base URL が使えない（送らない）
+	AIModelsNotInstalled    = "not_installed"    // ローカルAI（managed）が未導入（通信しない）
 	AIModelsUnsupported     = "unsupported"      // Models API が無い
 	AIModelsUnauthorized    = "unauthorized"     // キー不正・権限なし
 	AIModelsRateLimited     = "rate_limited"

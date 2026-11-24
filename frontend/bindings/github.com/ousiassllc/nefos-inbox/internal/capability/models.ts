@@ -40,4 +40,9 @@ export interface Capabilities {
      * タッチ操作中心の画面（幅に応じて 1 画面ずつ進む表示・44px のタップ領域）。有効なら最小ウィンドウ幅の制限も外す
      */
     "touchUi": boolean;
+
+    /**
+     * ローカル AI（アプリが用意する Ollama。#458）。Windows だけ
+     */
+    "supportsLocalAi": boolean;
 }

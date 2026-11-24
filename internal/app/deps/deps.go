@@ -12,6 +12,7 @@ import (
 	"github.com/ousiassllc/nefos-inbox/internal/events"
 	"github.com/ousiassllc/nefos-inbox/internal/exportfile"
 	"github.com/ousiassllc/nefos-inbox/internal/gmail"
+	"github.com/ousiassllc/nefos-inbox/internal/localai"
 	"github.com/ousiassllc/nefos-inbox/internal/notify"
 	"github.com/ousiassllc/nefos-inbox/internal/oauth"
 	"github.com/ousiassllc/nefos-inbox/internal/secrets"
@@ -77,9 +78,11 @@ type Deps struct {
 	// Classifier は Inbox Zero の判定に使う Classifier を作る。返信下書きの AI（AI）とは別の経路。
 	Classifier ClassifierFactory
 	ChatGPT    siwc.Auth // Sign in with ChatGPT（ログイン・更新・ログアウト）
-	Logger     *slog.Logger
-	DataDir    string // %APPDATA%\Nefos Inbox
-	Version    string
+	// LocalAI はアプリが用意するローカル AI（Ollama。Windows のみ。#458）。nil は使えない（導入・起動できない OS・未配線）。
+	LocalAI localai.Runtime
+	Logger  *slog.Logger
+	DataDir string // %APPDATA%\Nefos Inbox
+	Version string
 
 	// Capabilities はこの OS で提供する機能（MCP・自動更新など。Android では無効）。ゼロ値は全機能が無効。
 	Capabilities capability.Capabilities

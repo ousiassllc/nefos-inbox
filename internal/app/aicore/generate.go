@@ -4,18 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 	"strings"
 	"time"
 	"unicode/utf8"
 
 	"github.com/ousiassllc/nefos-inbox/internal/ai"
+	"github.com/ousiassllc/nefos-inbox/internal/app/aicore/aiinput"
+	"github.com/ousiassllc/nefos-inbox/internal/app/aicore/localconn"
 	"github.com/ousiassllc/nefos-inbox/internal/app/apperr"
 	"github.com/ousiassllc/nefos-inbox/internal/app/bodyhtml"
 	"github.com/ousiassllc/nefos-inbox/internal/app/dto"
 	"github.com/ousiassllc/nefos-inbox/internal/domain/model"
 	"github.com/ousiassllc/nefos-inbox/internal/domain/textconv"
-	"github.com/ousiassllc/nefos-inbox/internal/gmail"
 )
 
 // AI に渡すコンテキストの上限（NF §12）。
@@ -23,9 +23,6 @@ const (
 	aiContextMessages = 5
 	aiContextChars    = 20000
 )
-
-// labelDraft は Gmail の下書きメッセージに付くシステムラベル。
-const labelDraft = "DRAFT"
 
 // errCancelledByUser は CancelGenerate による中止の原因。
 var errCancelledByUser = errors.New("ai: cancelled by user")
@@ -109,12 +106,21 @@ func (s *Service) callProvider(ctx context.Context, cfg SelectedAI, key string, 
 	if ctx.Err() != nil { // 中止済みなら、プロバイダを作らず・何も送らない
 		return "", s.mapError(ctx, context.Cause(ctx), "")
 	}
-	provider, err := s.d.AI(cfg.Provider, cfg.Model, cfg.BaseURL, key)
+	callCtx, stop := context.WithTimeout(ctx, s.timeoutFor(cfg.Provider))
+	defer stop()
+	// managed のローカルAIは、期限の中で Ollama を起動して送信先を得る（release は呼び出しの後）。
+	baseURL, release, err := localconn.Open(callCtx, s.d.LocalAI, cfg.Provider, cfg.LocalMode, cfg.BaseURL)
+	if err != nil {
+		if context.Cause(callCtx) != nil {
+			return "", s.mapError(callCtx, err, "")
+		}
+		return "", err
+	}
+	defer release()
+	provider, err := s.d.AI(cfg.Provider, cfg.Model, baseURL, key)
 	if err != nil {
 		return "", initError(err)
 	}
-	callCtx, stop := context.WithTimeout(ctx, s.timeout)
-	defer stop()
 	text, err := call(callCtx, provider)
 	if err != nil {
 		if context.Cause(callCtx) != nil {
@@ -163,46 +169,12 @@ func (s *Service) buildInput(ctx context.Context, ref dto.ThreadRef) (ai.ReplyIn
 	if err != nil {
 		return ai.ReplyInput{}, err
 	}
-	msgs := contextMessages(thread)
+	msgs := aiinput.ContextMessages(thread)
 	return ai.ReplyInput{
 		AccountDisplayName: acct.DisplayName,
 		SignatureText:      strings.TrimSpace(textconv.HTMLToText(acct.SignatureHTML)),
 		Messages:           ai.Truncate(msgs, aiContextMessages, aiContextChars),
 	}, nil
-}
-
-// contextMessages はスレッドの DRAFT でないメッセージを、古い順のままプレーンテキスト化して返す（添付はファイル名とサイズだけ）。
-func contextMessages(thread gmail.ThreadFull) []ai.ContextMessage {
-	msgs := make([]ai.ContextMessage, 0, len(thread.Messages))
-	for _, m := range thread.Messages {
-		if slices.Contains(m.LabelIDs, labelDraft) {
-			continue
-		}
-		msgs = append(msgs, ai.ContextMessage{From: senderLabel(m), Date: m.InternalDate, Text: messageText(m), Attachments: attachmentRefs(m.Attachments)})
-	}
-	return msgs
-}
-
-func attachmentRefs(atts []model.AttachmentInfo) []ai.AttachmentRef {
-	refs := make([]ai.AttachmentRef, len(atts))
-	for i, a := range atts {
-		refs[i] = ai.AttachmentRef{Filename: a.Filename, Size: a.Size}
-	}
-	return refs
-}
-
-func senderLabel(m gmail.MessageFull) string {
-	if m.From.Name != "" {
-		return m.From.Name
-	}
-	return m.From.Email
-}
-
-func messageText(m gmail.MessageFull) string {
-	if m.BodyHTML != "" {
-		return strings.TrimSpace(textconv.HTMLToText(m.BodyHTML))
-	}
-	return strings.TrimSpace(m.BodyText)
 }
 
 // mapError は生成中のエラーを AppError にする。中止は CANCELLED、60 秒超過は AI_FAILED。

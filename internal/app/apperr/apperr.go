@@ -62,6 +62,9 @@ const (
 	// ReasonAccountSignedOut は AI_NOT_CONFIGURED: SelectChatGPTAccount で選んだ ChatGPT アカウントがログアウト済み。
 	// 画面は「再ログイン」を案内する文面（messages）に置き換える。
 	ReasonAccountSignedOut = "account_signed_out"
+	// ローカルAI（#458）の VALIDATION の reason。
+	ReasonBusy    = "busy"     // 導入・取得のジョブが走っている
+	ReasonNoSpace = "no_space" // 空き容量が足りない（details.requiredBytes・freeBytes）
 )
 
 // Error は AppError。JSON は {code, message, retryable, accountId?, details?}。

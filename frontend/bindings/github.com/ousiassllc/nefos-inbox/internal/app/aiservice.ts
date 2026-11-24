@@ -126,6 +126,13 @@ export function SetAIFeature(feature: string, provider: string, model: string, e
 }
 
 /**
+ * SetAILocalConnection はローカルAI（Ollama。#458）のつなぎ方（managed／external と、external の Base URL）を保存する。
+ */
+export function SetAILocalConnection(mode: string, baseURL: string): $CancellablePromise<dto$0.AIConfig> {
+    return $Call.ByID(3214495739, mode, baseURL);
+}
+
+/**
  * SetInboxZeroReasons は「不要なメール」の理由ごとのオン・オフを保存する（広告・通知・ニュースレター・返信済み・カレンダー）。
  */
 export function SetInboxZeroReasons(reasons: dto$0.InboxZeroReasons): $CancellablePromise<dto$0.InboxZeroSettings> {

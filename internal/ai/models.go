@@ -25,6 +25,7 @@ const anthropicModelsMaxPages = 5
 
 // ListModels は provider のモデル一覧を返す。空なら非 nil の空スライス。重複・空 ID は除く。
 //   - openai: GET {base}/models（Base URL は New と同じ検証。不正なら ErrInvalidBaseURL／ErrInsecureBaseURL で、通信しない）
+//   - local: openai と同じ（Base URL は必須。API キーは任意で、空なら Authorization ヘッダを付けない）
 //   - anthropic: GET /v1/models?limit=1000（has_more の間 after_id で最大 5 ページ）
 //   - chatgpt: GET {base}/models（visibility が "list" のものだけ、サーバー順）
 //
@@ -34,12 +35,15 @@ const anthropicModelsMaxPages = 5
 // API が無いときは ErrModelsUnsupported。本文・キー・URL はエラーに含めない。
 func ListModels(ctx context.Context, provider, baseURL, apiKey string, hc *http.Client) ([]ModelInfo, error) {
 	switch provider {
-	case ProviderOpenAI, ProviderAnthropic, ProviderChatGPT:
+	case ProviderOpenAI, ProviderAnthropic, ProviderChatGPT, ProviderLocal:
 	default:
 		return nil, fmt.Errorf("ai: 未対応のプロバイダです: %q", provider)
 	}
-	if provider != ProviderOpenAI && hc == nil {
+	if (provider == ProviderAnthropic || provider == ProviderChatGPT) && hc == nil {
 		baseURL = ""
+	}
+	if err := requireLocalBase(provider, baseURL); err != nil {
+		return nil, err
 	}
 	def := defaultOpenAIBaseURL
 	if provider == ProviderAnthropic {
@@ -50,7 +54,7 @@ func ListModels(ctx context.Context, provider, baseURL, apiKey string, hc *http.
 		return nil, err
 	}
 	if hc == nil {
-		hc = NewHTTPClient()
+		hc = httpClientFor(provider)
 	}
 	c := client{hc: hc, base: base, apiKey: apiKey}
 
@@ -91,8 +95,7 @@ func (c client) listOpenAIModels(ctx context.Context) ([]ModelInfo, error) {
 			ID string `json:"id"`
 		} `json:"data"`
 	}
-	headers := map[string]string{"Authorization": "Bearer " + c.apiKey}
-	if err := c.getJSON(ctx, c.base+"/models", headers, &resp); err != nil {
+	if err := c.getJSON(ctx, c.base+"/models", bearer(c.apiKey), &resp); err != nil {
 		return nil, err
 	}
 	set := newModelSet()

@@ -18,7 +18,7 @@ var anthropicEfforts = []string{EffortLow, EffortMedium, EffortHigh, EffortXHigh
 // 多くのモデルが受け付ける 3 段階に限る（none・minimal・xhigh などはモデルによって 400 になる）。
 var commonEfforts = []string{EffortLow, EffortMedium, EffortHigh}
 
-// EffortScale は provider が取り得るエフォートの段階（弱い順）を返す。未知のプロバイダは nil。
+// EffortScale は provider が取り得るエフォートの段階（弱い順）を返す。未知のプロバイダと local（エフォートを使わない）は nil。
 // モデルごとの対応（Anthropic）は ModelInfo.Efforts が持つ。
 func EffortScale(provider string) []string {
 	switch provider {
