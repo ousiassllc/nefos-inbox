@@ -26,6 +26,7 @@ import (
 	appevents "github.com/ousiassllc/nefos-inbox/internal/events"
 	"github.com/ousiassllc/nefos-inbox/internal/gmail"
 	"github.com/ousiassllc/nefos-inbox/internal/headless"
+	"github.com/ousiassllc/nefos-inbox/internal/localai"
 	"github.com/ousiassllc/nefos-inbox/internal/logging"
 	"github.com/ousiassllc/nefos-inbox/internal/notify"
 	"github.com/ousiassllc/nefos-inbox/internal/oauth"
@@ -159,6 +160,9 @@ func run() error {
 		background = notify.NopBackground{}
 	}
 
+	// アプリが用意するローカルAI（Ollama。Windows のみ。#458）。起動は Acquire のときだけで、終了時に shutdown で止める。
+	localRT, closeLocalAI := newLocalAI(caps, localai.DefaultDir, events, logger)
+
 	deps := &app.Deps{
 		Store: st, Gmail: gm, Secrets: sec, OAuth: flow, OAuthTracker: oauthTracker, Sync: sched, Notifier: notifier,
 		Update:  update.NewGitHub(update.Options{UserAgent: "NefosInbox/" + version}),
@@ -177,6 +181,7 @@ func run() error {
 		ChatGPT: siwc.New(siwc.Options{
 			OpenBrowser: platform.NewBrowser(wapp).Open, Secrets: sec, Settings: st, Clock: clk, Logger: logger,
 		}),
+		LocalAI:      localRT,
 		Background:   background,
 		OpenRequests: platform.NewOpenRequests(wapp, emitter),
 		Logger:       logger, DataDir: dir, Version: version, Capabilities: caps,
@@ -203,6 +208,7 @@ func run() error {
 			cancel()
 			loops.Wait()
 			svc.MCP.Shutdown()
+			closeLocalAI()
 			sched.Shutdown()
 		}, platform.ShutdownGrace)
 		if !stopped {
