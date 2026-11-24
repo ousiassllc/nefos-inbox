@@ -11,6 +11,9 @@ const props = defineProps<{
   hasKey: boolean
   busy?: 'key' | 'clear' | 'consent' | 'baseUrl'
   error?: string
+  /** 見出し・入力欄の説明の差し替え（キーが任意のローカルAI〔#458〕。省略時は既定の文言）。 */
+  heading?: string
+  hint?: string
 }>()
 const emit = defineEmits<{ save: [apiKey: string]; clear: [] }>()
 
@@ -44,7 +47,7 @@ defineExpose({
 <template>
   <div ref="root" class="key">
     <div class="group">
-      <h4 class="sub">{{ msg.ai.apiKeyHeading }}</h4>
+      <h4 class="sub">{{ props.heading ?? msg.ai.apiKeyHeading }}</h4>
       <p class="status">
         {{ props.providerLabel }}：
         <strong>{{ props.hasKey ? msg.ai.apiKeyStatusSet : msg.ai.apiKeyStatusUnset }}</strong>
@@ -57,7 +60,7 @@ defineExpose({
       autocomplete="new-password"
       :label="msg.ai.apiKeyFor(props.providerLabel)"
       :placeholder="msg.ai.apiKeyPlaceholder"
-      :hint="msg.ai.apiKeyStored"
+      :hint="props.hint ?? msg.ai.apiKeyStored"
       :error="props.error ?? localError"
       @enter="save"
     />

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { WarningCircle } from '@iconoir/vue'
 import { computed, nextTick, ref, watch } from 'vue'
+import { providerBaseUrl } from '../../../lib/localAi/baseUrl'
 import { common, compose as composeMsg, thread as msg } from '../../../lib/messages'
 import { useSettingsStore } from '../../../stores/settings'
 import { useThreadAiStore } from '../../../stores/threadAi'
@@ -8,6 +9,7 @@ import { useUiStore } from '../../../stores/ui'
 import AIConsentDialog from '../../settings/ai/AIConsentDialog.vue'
 import AISetupDialog from '../../settings/ai/AISetupDialog.vue'
 import { aiDestination } from '../../settings/ai/aiDestination'
+import LocalAiWaitNote from '../../settings/ai/local/LocalAiWaitNote.vue'
 import BaseButton from '../../ui/BaseButton.vue'
 import Spinner from '../../ui/Spinner.vue'
 import ThreadAiQuestionForm from './ThreadAiQuestionForm.vue'
@@ -24,14 +26,15 @@ const ui = useUiStore()
 const summarizing = computed(() => store.status === 'summarizing')
 const asking = computed(() => store.status === 'asking')
 const errorText = computed(() => store.error ?? props.flow.error.value)
-const needText = computed(() => (props.flow.usingChatGPT.value ? msg.ai.needLogin : msg.ai.needKey))
+const needText = computed(() => props.flow.needText.value)
+const aiProvider = computed(() => settings.aiConfig?.features.threadAi.provider)
 const truncated = computed(() => {
   const c = store.lastCounts
   return c !== undefined && c.included < c.total ? msg.ai.truncated(c.included, c.total) : undefined
 })
 const destination = computed(() => {
   const c = settings.aiConfig
-  return c ? aiDestination(c.features.threadAi.provider, c.baseUrl) : undefined
+  return c ? aiDestination(c.features.threadAi.provider, providerBaseUrl(c.features.threadAi.provider, c)) : undefined
 })
 
 const end = ref<HTMLElement>()
@@ -55,6 +58,7 @@ function ask(): void {
         <h3 class="heading">{{ msg.ai.summaryHeading }}</h3>
         <template v-if="summarizing">
           <span class="progress" role="status"><Spinner /> {{ msg.ai.summarizing }}</span>
+          <LocalAiWaitNote :provider="aiProvider" />
           <BaseButton size="sm" variant="secondary" data-testid="thread-ai-cancel" @click="store.cancel()">{{ msg.ai.cancel }}</BaseButton>
         </template>
         <BaseButton
@@ -91,6 +95,7 @@ function ask(): void {
       </div>
       <div v-if="asking" class="block-head">
         <span class="progress" role="status"><Spinner /> {{ msg.ai.asking }}</span>
+        <LocalAiWaitNote :provider="aiProvider" />
         <BaseButton size="sm" variant="secondary" data-testid="thread-ai-cancel" @click="store.cancel()">{{ msg.ai.cancel }}</BaseButton>
       </div>
     </div>

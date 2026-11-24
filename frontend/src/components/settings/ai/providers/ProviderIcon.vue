@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Server } from '@iconoir/vue'
+import { Cpu, Server } from '@iconoir/vue'
 import { computed } from 'vue'
 import blossomBlack from '../../../../assets/provider-logos/OAI_OpenAI-Blossom_Black.svg'
 import blossomWhite from '../../../../assets/provider-logos/OAI_OpenAI-Blossom_White.svg'
@@ -8,7 +8,7 @@ import type { AIProviderId } from './aiProviders'
 // プロバイダのアイコン枠（#315）。一覧のカードは、アイコンを必ずこのコンポーネント 1 つを通して出す。
 // 公式ロゴがあるプロバイダ（ChatGPT＝OpenAI の Blossom）は LOGOS の公式ファイルをそのまま出す（2026-11-23。色替え・切り抜きはしない。
 // 地が明るい Light は黒、暗い Dark は白の公式ファイル）。素材の出どころと利用条件は assets/provider-logos/NOTICE。
-// 公式ロゴが使えない・無いものは、頭文字のタイル（A・T。色分けなし）と、頭文字の無い OpenAI 互換だけ Iconoir の server。
+// 公式ロゴが使えない・無いものは、頭文字のタイル（A・T。色分けなし）と、頭文字の無い OpenAI 互換だけ Iconoir の server、ローカルAI（Ollama）は Iconoir の cpu（この PC で動かす）。
 // Anthropic は商標のガイドラインが事前の許可を求めるため、許可が出るまで頭文字のまま（NOTICE）。
 // 装飾なので読み上げない（カードにはサービス名の文字がある）。
 const props = defineProps<{ id: AIProviderId }>()
@@ -31,6 +31,7 @@ const initial = computed(() => TILES[props.id])
       <img :src="logo.light" alt="" width="32" height="32" draggable="false" />
     </picture>
     <template v-else-if="initial">{{ initial }}</template>
+    <Cpu v-else-if="id === 'local'" class="icon" />
     <Server v-else class="icon" />
   </span>
 </template>

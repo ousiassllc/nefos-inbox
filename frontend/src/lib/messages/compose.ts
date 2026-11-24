@@ -78,6 +78,8 @@ export const compose = {
       '「AI で下書き」に選んだ AI がつながっていません。設定の「AI のつなぎ先」で API キーを登録してください',
     needLogin:
       '「AI で下書き」に選んだ ChatGPT にログインしていません。設定の「AI のつなぎ先」でログインしてください',
+    needLocal:
+      '「AI で下書き」に選んだローカルAI（Ollama）が使える状態ではありません。設定の「AI のつなぎ先」で導入してください',
     // 利用枠の超過（subscription_sharing_usage_limit_exceeded）。文言（英語）は OpenAI の UI/UX ガイドラインに合わせ、
     // Manage usage を主なアクションにする。Nefos Inbox に独自のクレジットは無いので、購入の導線は出さない。
     usageLimit: {

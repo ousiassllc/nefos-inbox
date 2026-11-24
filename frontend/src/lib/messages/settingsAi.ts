@@ -1,4 +1,5 @@
 import { settingsChatgpt } from './settingsChatgpt'
+import { settingsLocalAi } from './settingsLocalAi'
 
 // 設定画面の AI の文言（settings.ai として settings.ts から参照する）。
 // AI の設定は「AI のつなぎ先」（connect）と「機能ごとに使う AI」（use）の 2 つのタブに分かれる（#376）。表記は「接続済み」「未接続」「つなぎ直しが必要」。
@@ -21,6 +22,7 @@ export const settingsAi = {
     openai: 'OpenAI 互換',
     chatgpt: 'ChatGPT プラン（Continue with ChatGPT）',
     typesafe: 'TypeSafe AI（Jev）',
+    local: 'ローカルAI（Ollama）',
   } as Record<string, string>,
   providerList: {
     open: (provider: string) => `${provider} の設定を開く`,
@@ -29,6 +31,7 @@ export const settingsAi = {
       anthropic: 'Anthropic',
       openai: 'OpenAI 互換',
       typesafe: 'TypeSafe AI（Jev）',
+      local: 'ローカルAI（Ollama）',
     } as Record<string, string>,
   },
   // 「AI のつなぎ先」タブ。プロバイダごとの状態と、つなぐ操作だけ。
@@ -121,6 +124,7 @@ export const settingsAi = {
   apiKeyRequired: 'API キーを入力してください。',
   apiKeyStored: 'API キーは資格情報ストアに保存され、画面には再表示されません。',
   chatgpt: settingsChatgpt,
+  local: settingsLocalAi,
   // つなぐときの同意（F-08）。同意の画面の文言は compose.ai の consentTitle／consentBody と共通。
   consentDialogAgree: '同意する',
   consentNeeded: (provider: string) =>
