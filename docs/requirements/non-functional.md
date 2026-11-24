@@ -97,7 +97,7 @@
 ## 7. 互換性・動作環境
 
 - OS: Windows 10（1809 以降）／Windows 11、x64。ARM64 の Windows 11 は x64 エミュレーションで x64 版を動かす（ARM64 版のビルド・インストーラーは作らない。ARM64 の Windows 10 は x64 エミュレーションが無いため対象外。[環境構築 §4.3](../environment/setup.md)）
-- ローカルAI（Ollama）の managed は Windows 10 22H2（build 19045）以降・x64（ARM64 の Windows は x64 エミュレーションで動いていても対象外）・物理メモリ 8 GB 以上の PC だけで使える。使えない PC では理由とクラウド（ChatGPT プラン・Anthropic・OpenAI 互換）の案内を出す。Android・macOS には出さない（external の接続も Windows だけ。#458）
+- ローカルAI（Ollama）の managed は Windows 10 22H2（build 19045）以降・x64（ARM64 の Windows は x64 エミュレーションで動いていても対象外）・物理メモリ 7 GiB 以上（8 GB の PC は予約領域のため利用可能な物理メモリが 8 GiB を下回って報告されるので、7 GiB を境にする）の PC だけで使える。使えない PC では理由とクラウド（ChatGPT プラン・Anthropic・OpenAI 互換）の案内を出す。Android・macOS には出さない（external の接続も Windows だけ。#458）
 - OS（Android）: Android 12（API 31）以上（`minSdk` 31）。それより古い端末にはインストールできない
 - WebView2 ランタイムが必要。未導入環境ではインストーラ／README で案内する
 - 画面（Windows）: 最小ウィンドウ幅 960px、3 ペイン。DPI スケーリング 100〜200% で崩れないこと
