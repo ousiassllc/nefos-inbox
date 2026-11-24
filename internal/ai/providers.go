@@ -80,7 +80,7 @@ func (a *anthropic) complete(ctx context.Context, system string, messages []chat
 	return nonEmpty(b.String())
 }
 
-// openAI は OpenAI 互換 Chat Completions の実装。
+// openAI は OpenAI 互換 Chat Completions の実装（local も同じ。キーが空なら Authorization ヘッダを付けない）。
 type openAI struct{ client }
 
 type openAIRequest struct {
@@ -119,9 +119,8 @@ func (o *openAI) complete(ctx context.Context, system string, messages []chatMes
 		Messages:        append([]chatMessage{{Role: "system", Content: system}}, messages...),
 		ReasoningEffort: effort,
 	}
-	headers := map[string]string{"Authorization": "Bearer " + o.apiKey}
 	var resp openAIResponse
-	if err := o.postJSON(ctx, o.base+"/chat/completions", headers, req, &resp); err != nil {
+	if err := o.postJSON(ctx, o.base+"/chat/completions", bearer(o.apiKey), req, &resp); err != nil {
 		return "", err
 	}
 	if len(resp.Choices) == 0 {

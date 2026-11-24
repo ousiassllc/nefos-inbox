@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"github.com/ousiassllc/nefos-inbox/internal/ai"
+	"github.com/ousiassllc/nefos-inbox/internal/app/aicore/aiinput"
+	"github.com/ousiassllc/nefos-inbox/internal/app/aicore/localconn"
 	"github.com/ousiassllc/nefos-inbox/internal/app/apperr"
 	"github.com/ousiassllc/nefos-inbox/internal/app/dto"
 	"github.com/ousiassllc/nefos-inbox/internal/store"
@@ -42,14 +44,23 @@ func (f storedFeature) dto() dto.AIFeatureSetting {
 type storedConnection struct {
 	// OpenAIBaseURL は OpenAI 互換の Base URL。空は OpenAI の既定の送信先。openai を選んだ機能すべてがこれを使う。
 	OpenAIBaseURL string `json:"openaiBaseUrl,omitempty"`
+	// LocalMode・LocalBaseURL はローカルAI（#458）のつなぎ方。LocalMode は managed／external（空は managed）、LocalBaseURL は external のときだけ。
+	LocalMode    string `json:"localMode,omitempty"`
+	LocalBaseURL string `json:"localBaseUrl,omitempty"`
+}
+
+func (c storedConnection) local() localconn.Conn {
+	return localconn.Conn{Mode: c.LocalMode, BaseURL: c.LocalBaseURL}
 }
 
 // SelectedAI は 1 回の実行に使う、選んだ AI（プロバイダ・モデル・送信先・エフォート）。
 type SelectedAI struct {
 	Provider string
 	Model    string
-	BaseURL  string // openai のみ
-	Effort   string
+	BaseURL  string // openai・local（external）のみ。managed のローカルAIは呼び出しのとき Ollama を起動して決める
+	// LocalMode はローカルAI（local）のつなぎ方（managed／external。空は managed）。
+	LocalMode string
+	Effort    string
 }
 
 // validFeature は機能 ID か。
@@ -140,6 +151,9 @@ func (s *Service) FeatureAI(ctx context.Context, feature string) (sel SelectedAI
 	if sel.Provider == providerOpenAI {
 		sel.BaseURL = conn.OpenAIBaseURL
 	}
+	if sel.Provider == providerLocal {
+		sel.LocalMode, sel.BaseURL = conn.LocalMode, conn.LocalBaseURL
+	}
 	return sel, chosen.Provider != "", nil
 }
 
@@ -149,6 +163,8 @@ type FeaturesAPI interface {
 	SetAIFeature(ctx context.Context, feature, provider, model, effort string) (dto.AIConfig, error)
 	// SetAIBaseURL は OpenAI 互換の Base URL（つなぎ先の設定）を保存する。
 	SetAIBaseURL(ctx context.Context, baseURL string) (dto.AIConfig, error)
+	// SetAILocalConnection はローカルAI（Ollama。#458）のつなぎ方（managed／external と、external の Base URL）を保存する。
+	SetAILocalConnection(ctx context.Context, mode, baseURL string) (dto.AIConfig, error)
 }
 
 var _ FeaturesAPI = (*Service)(nil)
@@ -173,6 +189,9 @@ func (s *Service) SetAIFeature(ctx context.Context, feature, provider, model, ef
 	case model == "":
 		return dto.AIConfig{}, apperr.New(apperr.Validation, "モデルを選んでください。")
 	}
+	if provider == providerLocal && !s.d.Capabilities.SupportsLocalAI {
+		return dto.AIConfig{}, apperr.New(apperr.Validation, "ローカルAIはこの OS では選べません。")
+	}
 	if effort != "" && (!featureAllowsEffort(feature) || !ai.ValidEffort(provider, effort)) {
 		return dto.AIConfig{}, apperr.New(apperr.Validation, "エフォートが正しくありません。")
 	}
@@ -196,18 +215,28 @@ func (s *Service) SetAIFeature(ctx context.Context, feature, provider, model, ef
 func (s *Service) SetAIBaseURL(ctx context.Context, baseURL string) (dto.AIConfig, error) {
 	baseURL = strings.TrimSpace(baseURL)
 	if baseURL != "" {
-		if err := validateBaseURL(baseURL); err != nil {
+		if err := aiinput.ValidateBaseURL(baseURL); err != nil {
 			return dto.AIConfig{}, err
 		}
 	}
-	b, err := json.Marshal(storedConnection{OpenAIBaseURL: baseURL})
+	conn, err := s.loadConnection(ctx)
+	if err != nil {
+		return dto.AIConfig{}, err
+	}
+	conn.OpenAIBaseURL = baseURL
+	return s.saveConnection(ctx, conn)
+}
+
+// saveConnection はつなぎ先の設定を保存し、現在の送信先と合わなくなった同意を外して、保存後の設定を返す。
+func (s *Service) saveConnection(ctx context.Context, conn storedConnection) (dto.AIConfig, error) {
+	b, err := json.Marshal(conn)
 	if err != nil {
 		return dto.AIConfig{}, apperr.Wrap(apperr.Internal, "AI のつなぎ先の設定を保存できません。", err)
 	}
 	if err := s.d.Store.SetSetting(ctx, store.SettingAIConnection, string(b)); err != nil {
 		return dto.AIConfig{}, apperr.FromInfra(err, "")
 	}
-	if err := s.pruneConsent(ctx, baseURL); err != nil {
+	if err := s.pruneConsent(ctx, conn); err != nil {
 		return dto.AIConfig{}, err
 	}
 	return s.config(ctx)

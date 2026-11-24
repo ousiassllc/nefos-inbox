@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/ousiassllc/nefos-inbox/internal/app/aicore/aiinput"
 	"github.com/ousiassllc/nefos-inbox/internal/app/apperr"
 	"github.com/ousiassllc/nefos-inbox/internal/app/dto"
 	"github.com/ousiassllc/nefos-inbox/internal/siwc"
@@ -59,6 +60,9 @@ func (s *Service) precheckInboxZero(ctx context.Context) (SelectedAI, string, er
 // precheckSelected は選んだ AI（sel）がつながっていて、モデルがあり、同意済みかを検査し、使うキーを返す。
 func (s *Service) precheckSelected(ctx context.Context, feature string, sel SelectedAI) (SelectedAI, string, error) {
 	label := featureLabels[feature]
+	if sel.Provider == providerLocal {
+		return s.precheckLocal(ctx, label, sel)
+	}
 	// ChatGPT のトークンは、同意の確認が済むまで取得（更新）しない。まずはログイン済みかだけを見る。
 	var (
 		key string
@@ -79,15 +83,15 @@ func (s *Service) precheckSelected(ctx context.Context, feature string, sel Sele
 		return sel, "", notConnectedError(label, sel.Provider)
 	}
 	if sel.Provider != providerTypeSafe && strings.TrimSpace(sel.Model) == "" {
-		return sel, "", apperr.New(apperr.AINotConfigured, label+"で使うモデルを、設定画面の「機能ごとに使う AI」で選んでください。")
+		return sel, "", errNoModel(label)
 	}
 	if sel.BaseURL != "" && sel.Provider == providerOpenAI {
 		// 保存済みの旧設定（非 loopback の http:// など）は、接続前に分かりやすく拒否する。
-		if err := validateBaseURL(sel.BaseURL); err != nil {
+		if err := aiinput.ValidateBaseURL(sel.BaseURL); err != nil {
 			return sel, "", apperr.Wrap(apperr.Validation, "保存済みの Base URL は使えません。設定画面の「AI のつなぎ先」で https:// の URL（または localhost の http://）に直してください。", err)
 		}
 	}
-	consented, err := s.loadConsent(ctx, sel.BaseURL)
+	consented, err := s.loadConsent(ctx, storedConnection{OpenAIBaseURL: sel.BaseURL})
 	if err != nil {
 		return sel, "", err
 	}
@@ -104,6 +108,11 @@ func (s *Service) precheckSelected(ctx context.Context, feature string, sel Sele
 		}
 	}
 	return sel, key, nil
+}
+
+// errNoModel はモデル未選択のときのエラー（選ぶ場所の案内）。
+func errNoModel(label string) error {
+	return apperr.New(apperr.AINotConfigured, label+"で使うモデルを、設定画面の「機能ごとに使う AI」で選んでください。")
 }
 
 // notConnectedError は選んだ AI がつながっていないときのエラー（つなぎ直しの案内）。

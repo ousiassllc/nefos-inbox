@@ -137,6 +137,7 @@ export async function setup(
     baseUrl,
     chatgptSignedIn: false,
     chatgptAccounts: [],
+    local: { mode: 'managed', baseUrl: '', ready: false },
   }
   settings.recordAIConsent = async (provider: string, baseUrl = '') => {
     kitCalls.push({ name: 'RecordAIConsent', args: [provider, baseUrl] })

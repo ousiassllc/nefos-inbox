@@ -20,6 +20,7 @@ const DEFAULT_CAPABILITIES: Capabilities = {
   supportsWindowState: true,
   singleInstance: true,
   touchUi: false,
+  supportsLocalAi: false,
 }
 
 /**

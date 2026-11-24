@@ -20,12 +20,18 @@ type Capabilities struct {
 	SupportsWindowState bool   `json:"supportsWindowState"` // ウィンドウの位置・サイズ・最大化の保存と復元
 	SingleInstance      bool   `json:"singleInstance"`      // 多重起動の防止（2 つ目のプロセスは既存ウィンドウを前面に出して終了する）
 	TouchUI             bool   `json:"touchUi"`             // タッチ操作中心の画面（幅に応じて 1 画面ずつ進む表示・44px のタップ領域）。有効なら最小ウィンドウ幅の制限も外す
+	SupportsLocalAI     bool   `json:"supportsLocalAi"`     // ローカル AI（アプリが用意する Ollama。#458）。Windows だけ
 }
 
+// OSWindows は Windows の OS 名（runtime.GOOS と同じ表記）。
+const OSWindows = "windows"
+
 // Desktop はデスクトップ OS（Windows など）の機能。MCP・トレイ・更新確認・ウィンドウ状態・多重起動の防止はすべて有効で、タッチ UI は無効（3 ペイン固定）。
+// ローカル AI（SupportsLocalAI）は os が Windows のときだけ有効（macOS・Linux では導入・起動の仕組みを持たない）。
 func Desktop(os string) Capabilities {
 	return Capabilities{
 		OS: os, SupportsMCP: true, SupportsTray: true, SupportsAutoUpdate: true, SupportsWindowState: true, SingleInstance: true,
+		SupportsLocalAI: os == OSWindows,
 	}
 }
 
