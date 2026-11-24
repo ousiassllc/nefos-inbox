@@ -78,7 +78,7 @@ watch(
 
 const destination = computed(() => {
   const c = settings.aiConfig
-  return c ? aiDestination(c.features.draft.provider, providerBaseUrl(c.features.draft.provider, c)) : undefined
+  return c ? aiDestination(c.features.draft.provider, providerBaseUrl(c.features.draft.provider, c), c.local?.loopback) : undefined
 })
 
 // 「AI で下書き」に選んだのが ChatGPT プラン・ローカルAIのときだけ、案内文を出し分ける（案内文の出し分けだけに使う）。

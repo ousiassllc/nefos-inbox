@@ -15,8 +15,13 @@ beforeEach(() => {
 
 // 「機能ごとに使う AI」のローカルAI（#458）。local.ready のときだけ選べ、モデルは ListAIModels('local', …)、エフォートは出さない。
 
-const MANAGED = { mode: 'managed', baseUrl: '', ready: true }
-const EXTERNAL = { mode: 'external', baseUrl: 'http://localhost:1234/v1', ready: true }
+const MANAGED = { mode: 'managed', baseUrl: '', ready: true, loopback: true }
+const EXTERNAL = {
+  mode: 'external',
+  baseUrl: 'http://localhost:1234/v1',
+  ready: true,
+  loopback: true,
+}
 const LOCAL_MODELS = {
   provider: 'local',
   models: [{ id: 'gemma4:e4b', displayName: 'Gemma 4 E4B' }],

@@ -85,7 +85,7 @@ export const useInboxZeroStore = defineStore('inboxZero', () => {
     const p = selectedAI.value
     if (p === undefined) return undefined
     const baseUrl = providerBaseUrl(p, settings.aiConfig)
-    return { provider: p, baseUrl }
+    return { provider: p, baseUrl, loopback: settings.aiConfig?.local?.loopback }
   })
 
   const checkedCandidates = computed(() =>

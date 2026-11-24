@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { WarningCircle } from '@iconoir/vue'
-import { computed, onBeforeUnmount, watch } from 'vue'
+import { computed, onBeforeUnmount } from 'vue'
 import { gbNumber } from '../../../../lib/localAi/format'
 import { settings as msg } from '../../../../lib/messages'
 import { useLocalAiStore } from '../../../../stores/localAi'
@@ -11,25 +11,19 @@ import LocalAIProgress from './LocalAIProgress.vue'
 
 // 「このアプリが用意する Ollama」（managed。#458）。状態は LocalAIStatus（開いたとき取得し、`localai:status` で更新する。閉じたら購読を解除）。
 //   使えない PC → 理由とクラウドの案内 ／ 未導入 → 版・ダウンロード量・「Ollama を導入」 ／ 導入中 → 段階＋進捗＋「中止」 ／ 導入済み → AILocalInstalled。
-// 失敗（直前のジョブの lastError・操作の失敗・空き不足）は role="alert" で出す。
+// 失敗（直前のジョブの lastError・操作の失敗・空き不足）は role="alert" で出す。つなぎ先の「接続済み」の取り直しは、ストアが状態の変化で行う（設定ダイアログが開いている間は購読を保つ）。
 const store = useLocalAiStore()
 const t = msg.ai.local
 
 const status = computed(() => store.status)
 const installing = computed(() => (status.value?.job?.kind === 'install' ? status.value.job : undefined))
-const alerts = computed(() => [store.error, status.value?.lastError].filter((m): m is string => !!m))
+/** 同じ文面は 1 つだけ（操作の失敗と直前のジョブの失敗が同じ理由のとき）。 */
+const alerts = computed(() => [
+  ...new Set([store.error, status.value?.lastError].filter((m): m is string => !!m)),
+])
 
 const stop = store.start()
 onBeforeUnmount(stop)
-
-// 導入・モデルの取得・削除でつなぎ先の「接続済み」（local.ready。導入済みかつモデルが 1 つ以上取得済み）が変わるので、設定（aiConfig）を取り直す。
-// 最初の状態の取得（before が空）では取り直さない。
-const readyKey = computed(() =>
-  status.value ? `${status.value.installed}|${(status.value.models ?? []).filter((m) => m.installed).length}` : '',
-)
-watch(readyKey, (_, before) => {
-  if (before !== '') void store.refreshConfig()
-})
 </script>
 
 <template>
@@ -41,7 +35,12 @@ watch(readyKey, (_, before) => {
         <template v-for="m in alerts" :key="m"><br />{{ m }}</template>
       </span>
     </p>
-    <p v-if="!status" class="loading" role="status">{{ t.statusLoading }}</p>
+    <div v-if="!status">
+      <p v-if="!store.error" class="loading" role="status">{{ t.statusLoading }}</p>
+      <div v-else class="actions">
+        <BaseButton variant="secondary" data-testid="local-ai-reload" @click="store.refresh()">{{ t.reload }}</BaseButton>
+      </div>
+    </div>
     <AILocalUnsupported v-else-if="!status.supported" :reason="status.unsupportedReason" />
     <div v-else-if="installing" class="install" data-testid="local-ai-installing">
       <LocalAIProgress :job="installing" />

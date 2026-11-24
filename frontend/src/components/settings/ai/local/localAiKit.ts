@@ -145,7 +145,7 @@ export function aiConfig(over: Partial<AIConfig> = {}): AIConfig {
     consentedProviders: ['local'],
     chatgptSignedIn: false,
     chatgptAccounts: [],
-    local: { mode: 'managed', baseUrl: '', ready: false },
+    local: { mode: 'managed', baseUrl: '', ready: false, loopback: true },
     ...over,
   }
 }

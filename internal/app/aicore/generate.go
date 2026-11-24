@@ -28,7 +28,7 @@ const (
 var errCancelledByUser = errors.New("ai: cancelled by user")
 
 // GenerateReplyDraft は reply／reply_all セッションのスレッドから返信本文を生成する（F-08）。
-// 署名・引用は含めない。ctx のキャンセルと CancelGenerate は CANCELLED、60 秒超過は AI_FAILED。
+// 署名・引用は含めない。ctx のキャンセルと CancelGenerate は CANCELLED、タイムアウト超過（60 秒。ローカルAIは 300 秒）は AI_FAILED。
 // instruction は利用者が書いた「AI への指示」（#109）。前後の空白を除いて空なら指示なし。
 // 2,000 文字（rune 数）を超えると、通信せず VALIDATION。指示は保存せず、ログ・エラー文面にも残さない。
 func (s *Service) GenerateReplyDraft(ctx context.Context, sessionID, requestID, instruction string) (dto.ReplyDraft, error) {
@@ -149,6 +149,11 @@ func (s *Service) mapProviderError(provider, effort string, err error) error {
 	if errors.As(err, &ae) {
 		return err
 	}
+	if provider == providerLocal {
+		if ne := localconn.NetworkError(err); ne != nil {
+			return ne
+		}
+	}
 	if effort != "" && errors.Is(err, ai.ErrRejected) {
 		return apperr.Wrap(apperr.AIFailed, "このモデルは選んだエフォートに対応していません。設定でエフォートを「既定」に戻してください。", err).
 			WithDetail(apperr.DetailReason, apperr.ReasonEffortRejected)
@@ -177,7 +182,7 @@ func (s *Service) buildInput(ctx context.Context, ref dto.ThreadRef) (ai.ReplyIn
 	}, nil
 }
 
-// mapError は生成中のエラーを AppError にする。中止は CANCELLED、60 秒超過は AI_FAILED。
+// mapError は生成中のエラーを AppError にする。中止は CANCELLED、タイムアウト超過（60 秒。ローカルAIは 300 秒）は AI_FAILED。
 func (s *Service) mapError(ctx context.Context, err error, accountID string) error {
 	cause := context.Cause(ctx)
 	switch {

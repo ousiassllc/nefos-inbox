@@ -208,8 +208,14 @@ func run() error {
 			cancel()
 			loops.Wait()
 			svc.MCP.Shutdown()
-			closeLocalAI()
+			// ローカルAIの停止（Ollama の終了待ち。最長 3 秒ほど）は同期の停止と並べて走らせ、同期の停止が猶予（ShutdownGrace）を食われないようにする。
+			localClosed := make(chan struct{})
+			go func() {
+				defer close(localClosed)
+				closeLocalAI()
+			}()
 			sched.Shutdown()
+			<-localClosed
 		}, platform.ShutdownGrace)
 		if !stopped {
 			logger.Warn("shutdown timed out; continuing", "grace", platform.ShutdownGrace.String())

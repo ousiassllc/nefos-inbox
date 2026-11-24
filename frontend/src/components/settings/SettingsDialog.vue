@@ -4,6 +4,7 @@ import { computed, ref, watch } from 'vue'
 import { settings as msg } from '../../lib/messages'
 import { vOverlayScroll } from '../../lib/overlayScroll'
 import { useLayoutStore } from '../../stores/layout'
+import { keepLocalAiStatus } from '../../stores/localAi/keepStatus'
 import { usePlatformStore } from '../../stores/platform'
 import { useSettingsStore } from '../../stores/settings'
 import { useUiStore } from '../../stores/ui'
@@ -40,6 +41,7 @@ const open = computed({
   },
 })
 
+keepLocalAiStatus(open, () => platform.capabilities.supportsLocalAi) // 設定を開いている間、ローカルAIの状態の購読を保つ
 const tab = computed({
   get: () => ui.settingsTab,
   set: (v: string) => {

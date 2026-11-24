@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { parseBindingError } from '../../../../lib/api'
-import { isLoopbackBaseUrl } from '../../../../lib/localAi/baseUrl'
 import { settings as msg } from '../../../../lib/messages'
 import { useLocalAiStore } from '../../../../stores/localAi'
 import { useSettingsStore } from '../../../../stores/settings'
@@ -26,20 +25,30 @@ const busy = ref<AiBusy>()
 const consentOpen = ref(false)
 const provider = ref('local')
 
+/** 入力中の Base URL。親が持つ（managed に切り替えて戻っても消さない）。undefined は、まだ開いていない。 */
+const draft = defineModel<string | undefined>('draft')
+
 const c = useAiConnect({ provider, busy, errors, consentOpen, keyForm, chatgptLogin: ref(undefined) })
 
 /** 保存済みの Base URL（つなぎ方が external のときだけ。managed は空）。 */
 const saved = computed(() => c.baseUrl.value)
-const baseUrlInput = ref(saved.value)
+if (draft.value === undefined) draft.value = saved.value // 初めて開いたときは保存済みの値から始める
+const baseUrlInput = computed({
+  get: () => draft.value ?? '',
+  set: (v: string) => (draft.value = v),
+})
 const trimmed = computed(() => baseUrlInput.value.trim())
 const dirty = computed(() => trimmed.value !== saved.value)
 const hasKey = computed(() => (store.aiConfig?.apiKeyProviders ?? []).includes('local'))
 /** 送信先が PC の外の保存済みの Base URL のときだけ、送信への同意を求める（loopback は同意の欄を出さない）。 */
-const needsConsentSection = computed(() => saved.value !== '' && !isLoopbackBaseUrl(saved.value))
+const needsConsentSection = computed(() => saved.value !== '' && !(store.aiConfig?.local?.loopback ?? false))
 
-type TestResult = { ok: boolean; text: string }
+/** 接続テストの結果。warn は接続できたがモデルが 0 件（成功の緑にしない）。 */
+type TestResult = { kind: 'ok' | 'warn' | 'ng'; text: string }
 const testing = ref(false)
 const result = ref<TestResult>()
+// 入力を変えたら、前の入力への結果は消す。
+watch(trimmed, () => (result.value = undefined))
 
 async function save(): Promise<void> {
   if (busy.value || !dirty.value) return
@@ -65,18 +74,22 @@ async function save(): Promise<void> {
 async function test(): Promise<void> {
   if (testing.value) return
   if (trimmed.value === '') {
-    result.value = { ok: false, text: t.baseUrlRequired }
+    result.value = { kind: 'ng', text: t.baseUrlRequired }
     return
   }
+  const asked = trimmed.value
   testing.value = true
   result.value = undefined
   try {
-    const r = await local.testConnection(trimmed.value)
+    const r = await local.testConnection(asked)
+    if (trimmed.value !== asked) return // テスト中に入力が変わった。結果は前の入力のものなので捨てる
     const n = r.models?.length ?? 0
-    if (n > 0) result.value = { ok: true, text: t.testOk(n) }
-    else result.value = { ok: r.message === undefined && r.reason === undefined, text: r.message ?? (r.reason ? t.testFailed : t.testNone) }
+    if (n > 0) result.value = { kind: 'ok', text: t.testOk(n) }
+    else if (r.message !== undefined || r.reason !== undefined) result.value = { kind: 'ng', text: r.message ?? t.testFailed }
+    else result.value = { kind: 'warn', text: t.testNone }
   } catch (e) {
-    result.value = { ok: false, text: parseBindingError(e).message || t.testFailed }
+    if (trimmed.value !== asked) return
+    result.value = { kind: 'ng', text: parseBindingError(e).message || t.testFailed }
   } finally {
     testing.value = false
   }
@@ -87,7 +100,13 @@ async function test(): Promise<void> {
   <div class="external" data-testid="local-ai-external">
     <p class="intro">{{ t.externalIntro }}</p>
 
-    <AIDestinationBox provider="local" :base-url="saved" draft-provider="local" :draft-base-url="trimmed" />
+    <AIDestinationBox
+      provider="local"
+      :base-url="saved"
+      :loopback="store.aiConfig?.local?.loopback"
+      draft-provider="local"
+      :draft-base-url="trimmed"
+    />
 
     <div class="form">
       <SettingsInput
@@ -109,8 +128,8 @@ async function test(): Promise<void> {
       <p
         v-if="result"
         class="result"
-        :class="result.ok ? 'ok' : 'ng'"
-        :role="result.ok ? 'status' : 'alert'"
+        :class="result.kind"
+        :role="result.kind === 'ng' ? 'alert' : 'status'"
         data-testid="local-ai-test-result"
       >
         {{ result.text }}
@@ -179,6 +198,10 @@ async function test(): Promise<void> {
 
 .ok {
   color: var(--success);
+}
+
+.warn {
+  color: var(--warning);
 }
 
 .ng {

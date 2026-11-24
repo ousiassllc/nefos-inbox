@@ -66,7 +66,12 @@ func (m *Manager) Acquire(ctx context.Context) (string, func(), error) {
 		gen := m.stopGen
 		m.mu.Unlock()
 
-		pr, err := m.startProcess(ctx)
+		// 起動は Close（baseCtx の取り消し）でも中止する。呼び出し元の ctx だけに任せると、Close のあとに起動してしまう。
+		sctx, cancel := context.WithCancel(ctx)
+		stopLink := context.AfterFunc(m.baseCtx, cancel)
+		pr, err := m.startProcess(sctx)
+		stopLink()
+		cancel()
 
 		m.mu.Lock()
 		m.starting = nil
@@ -158,12 +163,16 @@ func (m *Manager) stopProcess() {
 	}
 }
 
-// Stop は今すぐ ollama を止める。Acquire 中の利用者がいても止める（その要求は失敗する。次の Acquire で起動し直す）。
-// 動いていなければ何もしない。
+// Stop は今すぐ ollama を止める。導入・取得のジョブ中は ErrBusy（ジョブが使っている Ollama を止めない）。
+// ジョブ以外で Acquire 中の利用者（生成など）がいても止める（その要求は失敗する。次の Acquire で起動し直す）。動いていなければ何もしない。
 func (m *Manager) Stop() error {
 	m.mu.Lock()
+	busy := m.job != nil
 	running := m.proc != nil
 	m.mu.Unlock()
+	if busy {
+		return ErrBusy
+	}
 	if !running {
 		return nil
 	}

@@ -31,6 +31,15 @@ func (m *Manager) startProcess(ctx context.Context) (*proc, error) {
 }
 
 func (m *Manager) launchOnce(ctx context.Context) (*proc, error) {
+	m.mu.Lock()
+	closed := m.closed
+	m.mu.Unlock()
+	switch { // 起動の直前に確かめる（Close のあとに子プロセスを作らない）
+	case closed:
+		return nil, errClosed
+	case ctx.Err() != nil:
+		return nil, ctx.Err()
+	}
 	port, err := freePort()
 	if err != nil {
 		return nil, failure("ローカルAIの待ち受けポートを確保できませんでした。", err)

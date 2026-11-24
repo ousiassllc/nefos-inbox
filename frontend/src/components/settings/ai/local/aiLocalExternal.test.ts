@@ -28,8 +28,11 @@ beforeEach(() => {
 
 const tid = (w: Pick<VueWrapper, 'find'>, id: string) => w.find(`[data-testid="${id}"]`)
 const OLLAMA = 'http://localhost:11434/v1'
+/** Go の loopback と同じ（テスト用。localhost・127.0.0.1・[::1] の厳密一致）。 */
+const isLoopback = (u: string) =>
+  /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?(\/|$)/.test(u)
 const EXTERNAL = (baseUrl = OLLAMA, ready = true) =>
-  aiConfig({ local: { mode: 'external', baseUrl, ready } })
+  aiConfig({ local: { mode: 'external', baseUrl, ready, loopback: isLoopback(baseUrl) } })
 
 async function open(cfg = aiConfig()) {
   useSettingsStore().aiConfig = cfg
@@ -105,6 +108,7 @@ describe('ローカルAI（external）（#458）', () => {
       mode: 'external',
       baseUrl: OLLAMA,
       ready: true,
+      loopback: true,
     })
     expect(tid(w, 'local-ai-base-url-save').attributes('disabled')).toBeDefined()
   })

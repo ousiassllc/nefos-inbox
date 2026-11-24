@@ -222,23 +222,44 @@ func (m *Manager) CancelJob() {
 	}
 }
 
+// closeWait は Close が、ジョブ・起動中の準備・ollama の終了を待つ合計の上限（アプリの終了の猶予 5 秒より短くする）。
+const closeWait = 3 * time.Second
+
 // Close はジョブを中止して ollama を止める。アプリの終了で呼ぶ。何度呼んでもよい。
+// 起動の途中だった Ollama はここで中止され（起動の ctx は baseCtx につながっている）、起動後に残らない。待ちの合計は closeWait まで。
 func (m *Manager) Close() {
 	m.mu.Lock()
 	already := m.closed
 	m.closed = true
-	done := m.jobDone
-	busy := m.job != nil
+	var waits []chan struct{}
+	if m.job != nil && m.jobDone != nil {
+		waits = append(waits, m.jobDone)
+	}
+	if m.starting != nil {
+		waits = append(waits, m.starting.done)
+	}
 	m.mu.Unlock()
 	if already {
 		return
 	}
 	m.baseCancel()
-	if busy && done != nil {
+	deadline := time.NewTimer(closeWait)
+	defer deadline.Stop()
+	for _, ch := range waits {
 		select {
-		case <-done:
-		case <-time.After(10 * time.Second):
+		case <-ch:
+		case <-deadline.C:
+			deadline.Reset(0) // 以降の待ちはすぐ打ち切る
 		}
 	}
-	m.stopProcess()
+	m.mu.Lock()
+	pr := m.takeProcLocked()
+	m.mu.Unlock()
+	if pr != nil {
+		pr.p.Kill()
+		select {
+		case <-pr.done:
+		case <-deadline.C:
+		}
+	}
 }

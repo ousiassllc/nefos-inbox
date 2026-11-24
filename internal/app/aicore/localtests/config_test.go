@@ -16,7 +16,7 @@ func TestConfigDefaultsToManagedAndReady(t *testing.T) {
 	f := newFixture(t)
 	cfg, err := f.svc.GetAIConfig(t.Context())
 	require.NoError(t, err)
-	assert.Equal(t, dto.AILocalConnection{Mode: "managed", Ready: true}, cfg.Local)
+	assert.Equal(t, dto.AILocalConnection{Mode: "managed", Ready: true, Loopback: true}, cfg.Local)
 	assert.Equal(t, []string{"local"}, cfg.ConsentedProviders)
 	assert.Empty(t, cfg.APIKeyProviders)
 }
@@ -46,7 +46,7 @@ func TestConfigOnUnsupportedOS(t *testing.T) {
 	f.setCaps(capability.Android())
 	cfg, err := f.svc.GetAIConfig(t.Context())
 	require.NoError(t, err)
-	assert.Equal(t, dto.AILocalConnection{Mode: "managed"}, cfg.Local)
+	assert.Equal(t, dto.AILocalConnection{Mode: "managed", Loopback: true}, cfg.Local)
 	assert.Empty(t, cfg.ConsentedProviders)
 
 	f.setCaps(capability.Desktop("windows"))
@@ -63,7 +63,7 @@ func TestSetAILocalConnection(t *testing.T) {
 
 	cfg, err := f.svc.SetAILocalConnection(ctx, "external", " http://localhost:11434/v1 ")
 	require.NoError(t, err)
-	assert.Equal(t, dto.AILocalConnection{Mode: "external", BaseURL: "http://localhost:11434/v1", Ready: true}, cfg.Local)
+	assert.Equal(t, dto.AILocalConnection{Mode: "external", BaseURL: "http://localhost:11434/v1", Ready: true, Loopback: true}, cfg.Local)
 	assert.Equal(t, []string{"local"}, cfg.ConsentedProviders, "loopback は同意不要")
 	assert.JSONEq(t, `{"localMode":"external","localBaseUrl":"http://localhost:11434/v1"}`, f.storedConnection(t))
 
@@ -100,6 +100,7 @@ func TestExternalNonLoopbackNeedsConsent(t *testing.T) {
 	cfg, err := f.svc.SetAILocalConnection(ctx, "external", "https://lm.example.com/v1")
 	require.NoError(t, err)
 	assert.True(t, cfg.Local.Ready)
+	assert.False(t, cfg.Local.Loopback, "https の別ホストは loopback ではない（画面は同意の欄を出す）")
 	assert.Empty(t, cfg.ConsentedProviders)
 
 	_, err = f.svc.RecordAIConsent(ctx, "local", "")
@@ -144,4 +145,17 @@ func TestSetAIFeatureLocal(t *testing.T) {
 	f.setCaps(capability.Android())
 	_, err = f.svc.SetAIFeature(ctx, dto.AIFeatureDraft, "local", "gemma4:e2b", "")
 	requireCode(t, "VALIDATION", err)
+}
+
+// loopback は Go の判定（厳密一致）と同じ。大文字・省略形・10 進・展開形は loopback ではない（http は保存できないので https で確かめる）。
+func TestLoopbackFlagMatchesGo(t *testing.T) {
+	f := newFixture(t)
+	for url, want := range map[string]bool{
+		"http://localhost:11434/v1": true, "http://127.0.0.1:1/v1": true, "http://[::1]:1/v1": true,
+		"https://LOCALHOST:1/v1": false, "https://127.1:1/v1": false, "https://2130706433:1/v1": false, "https://[0:0:0:0:0:0:0:1]:1/v1": false,
+	} {
+		cfg, err := f.svc.SetAILocalConnection(t.Context(), "external", url)
+		require.NoError(t, err, url)
+		assert.Equal(t, want, cfg.Local.Loopback, url)
+	}
 }

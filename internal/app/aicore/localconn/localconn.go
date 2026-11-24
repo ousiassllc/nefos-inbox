@@ -5,6 +5,7 @@ package localconn
 import (
 	"context"
 	"errors"
+	"net"
 	"slices"
 	"time"
 
@@ -17,6 +18,12 @@ import (
 
 // GenerateTimeout はローカルAIの生成（下書き・要約・質問・Inbox Zero の 1 件の判定）のタイムアウト。ほかのプロバイダは 60 秒。
 const GenerateTimeout = 300 * time.Second
+
+// NoStorageMessage は Windows など使える OS で、置き場所（DefaultDir）を決められずローカルAIの管理を作れなかったとき。
+const NoStorageMessage = "ローカルAIの保存先を決められませんでした。"
+
+// networkMessage はローカルAIのサーバーに接続できなかったとき（起動しているか確かめてもらう）。
+const networkMessage = "ローカルAIのサーバーに接続できませんでした。起動しているか確かめてください。"
 
 // installHint は managed で未導入のときの案内。
 const installHint = "ローカルAI（Ollama）を設定画面の「AI のつなぎ先」で導入してください。"
@@ -47,7 +54,7 @@ func Usable(caps capability.Capabilities, rt localai.Runtime, c Conn) bool {
 
 // Config は AIConfig.local。ready は managed が導入済みでモデルが 1 つ以上取得済み、external が Base URL を持ち有効なとき（使えない OS は false）。
 func Config(caps capability.Capabilities, rt localai.Runtime, c Conn) dto.AILocalConnection {
-	out := dto.AILocalConnection{Mode: dto.LocalModeManaged, BaseURL: ""}
+	out := dto.AILocalConnection{Mode: dto.LocalModeManaged, BaseURL: "", Loopback: c.Loopback()}
 	if !c.Managed() {
 		out.Mode, out.BaseURL = dto.LocalModeExternal, c.BaseURL
 	}
@@ -79,7 +86,7 @@ func Check(caps capability.Capabilities, rt localai.Runtime, c Conn) error {
 		return nil
 	}
 	if rt == nil {
-		return apperr.New(apperr.Unsupported, "ローカルAIはこの OS では使えません。")
+		return apperr.New(apperr.AIFailed, NoStorageMessage) // capability はあるのに管理が無い＝置き場所を決められなかった
 	}
 	st := rt.Status()
 	switch {
@@ -107,7 +114,7 @@ func Open(ctx context.Context, rt localai.Runtime, provider, mode, baseURL strin
 		return baseURL, noop, nil
 	}
 	if rt == nil {
-		return "", noop, apperr.New(apperr.Unsupported, "ローカルAIはこの OS では使えません。")
+		return "", noop, apperr.New(apperr.AIFailed, NoStorageMessage)
 	}
 	base, release, err := rt.Acquire(ctx)
 	switch {
@@ -143,5 +150,34 @@ func MapError(err error) *apperr.Error {
 	case errors.Is(err, context.Canceled):
 		return apperr.Wrap(apperr.Cancelled, "キャンセルしました。", err)
 	}
+	if msg, ok := localai.UserMessage(err); ok { // 起動・取得・削除の失敗は、それぞれの日本語の理由を出す
+		return apperr.Wrap(apperr.AIFailed, msg, err)
+	}
 	return apperr.Wrap(apperr.AIFailed, "ローカルAI（Ollama）を使えませんでした。起動や取得に失敗しています。", err)
+}
+
+// NetworkError はローカルAIの生成・一覧の通信エラー（接続拒否など。ctx の取り消し・期限切れを除く）を、
+// OFFLINE ではなく「サーバーに接続できない」AI_FAILED（再試行可）にする。該当しなければ nil。
+func NetworkError(err error) *apperr.Error {
+	var netErr net.Error
+	if err == nil || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) || !errors.As(err, &netErr) {
+		return nil
+	}
+	ae := apperr.Wrap(apperr.AIFailed, networkMessage, err)
+	ae.Retryable = true
+	return ae
+}
+
+// CheckModel は managed で、選んだモデルがカタログのモデルなのに取得済みでないとき AI_NOT_CONFIGURED を返す
+// （カタログ外の名前は Ollama に任せる。external は見ない）。
+func CheckModel(rt localai.Runtime, c Conn, model string) error {
+	if !c.Managed() || rt == nil {
+		return nil
+	}
+	for _, m := range rt.Status().Models {
+		if m.Name == model && !m.Installed {
+			return apperr.New(apperr.AINotConfigured, "選んだモデルを、設定画面の「AI のつなぎ先」のローカルAIで取得してください。")
+		}
+	}
+	return nil
 }

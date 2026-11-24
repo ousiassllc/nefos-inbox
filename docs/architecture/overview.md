@@ -398,7 +398,7 @@ sequenceDiagram
   FE->>AI: FindInboxZeroCandidates(refs, requestId)
   AI->>AI: 検証（requestId・refs は重複を除き 100 件まで・理由が 1 つ以上オン。通信しない）
   AI->>AI: AI の理由（広告・カレンダー・通知・ニュースレター）が 1 つでもオンなら、Inbox Zero に選んだ AI（`ai.features.inboxZero`。未選択で Jev のキーがあれば Jev）のキー・ログイン（AI_NOT_CONFIGURED）と同意（AI_CONSENT_REQUIRED）を確認して Classifier を作る
-  loop refs を最大 4 件ずつ並行に
+  loop refs を最大 4 件（ローカルAIは 1 件）ずつ並行に
     AI->>GM: threads.get(format=full)（メモリ LRU を優先）
     Note over AI: 判定はスレッドの最後の 1 通（下書きを除く）を見る
     alt 返信済みがオンで、最後の 1 通が自分の送信（SENT ラベル、または差出人が受信アカウントのアドレス）
@@ -455,8 +455,8 @@ sequenceDiagram
 - **managed の流れ**: `Acquire` は未起動のときだけ `ollama.exe serve` を起動し、使用中の数を数える。生成が終わると release し、最後の利用から 10 分でアイドル停止する。モデルのメモリは `OLLAMA_KEEP_ALIVE=5m` で先に降りる。常駐はしない。取得済みの判定は Ollama を起動せず、`models\manifests\registry.ollama.ai\library\<名前>\<タグ>` のファイルの有無で行う（画面の状態表示で Ollama を起こさない）
 - **external の流れ**: Base URL（利用者が指定した、すでに動いているサーバー）へ直接生成し、`Manager` は使わない。API キーは任意で、ある場合だけ `Authorization` を付ける
 - **同意**: 送信先が loopback（managed、または external の `localhost`／`127.0.0.1`／`::1`）なら、メールの内容が PC の外へ出ないので同意を取らない。loopback 以外の external だけ、`openai` と同じく「プロバイダ＋送信先」の同意を取る（`AI_CONSENT_REQUIRED`）。同意の保存は F-08 の `app_settings.ai.consent` を使う
-- **使えない PC**: `Manager.Support` が Windows 以外・ARM64 の Windows（x64 エミュレーションでも。`IsWow64Process2`）・Windows 10 22H2（build 19045）より古い・物理メモリ 8 GB 未満を判定し、その理由（日本語 1 文）を `LocalAIStatus.unsupportedReason` として返す
-- **ジョブの失敗**: 通信・サイズ不一致・SHA-256 の不一致・展開の拒否・起動の失敗などは、途中のファイルを消して `LocalAIStatus.lastError` に日本語 1 文で残す（次のジョブで消える）。Ollama の標準出力・標準エラーは捨て、末尾 4 KiB だけメモリに持つ（ファイルに書かない。メール本文・プロンプト・応答はログに出さない。NF-S10）
+- **使えない PC**: `localai.Options.Support`（既定は OS の検査。結果は `Status.Supported`・`UnsupportedReason`）が Windows 以外・ARM64 の Windows（x64 エミュレーションでも。`IsWow64Process2`）・Windows 10 22H2（build 19045）より古い・物理メモリ 7 GiB 未満（8 GB の PC は予約領域のため利用可能な物理メモリが 8 GiB を下回って報告されるので、8 GiB ちょうどではなく 7 GiB で判定する）を判定し、その理由（日本語 1 文）を `LocalAIStatus.unsupportedReason` として返す
+- **ジョブの失敗**: 通信・サイズ不一致・SHA-256 の不一致・展開の拒否・起動の失敗などは、途中のファイルを消して `LocalAIStatus.lastError` に日本語 1 文で残す（次のジョブで消える）。Ollama の標準出力・標準エラーは捨てる（メモリにもファイルにも持たない。メール本文・プロンプト・応答はログに出さない。NF-S10）。ダウンロードは応答ヘッダーを 30 秒待ち、60 秒バイトが届かなければ止めて「ダウンロードが進まなくなったため止めました。」を残す（`Options.StallTimeout`）。導入・取得のジョブ中の `Stop` は `ErrBusy`。`Close` は待ちの合計を 3 秒に抑え、起動中の準備は `baseCtx` で中止して起動直前にも終了済みかを確かめる（アプリ終了ではローカルAIの停止を同期の停止と並行に走らせ、終了の猶予 5 秒を食わない）。画面向けの失敗の理由は `localai.UserMessage` で取り出し、削除・起動の失敗に自分の文面を出す。ローカルAIの生成の通信エラー（`net.Error`）は `OFFLINE` ではなく `AI_FAILED`（「サーバーに接続できませんでした」。再試行可）、managed でカタログのモデルが未取得なら前提の検査で `AI_NOT_CONFIGURED`、Inbox Zero のローカルAIは同時 1 件
 - Windows での動作（Job Object・`CREATE_NO_WINDOW`・`IsWow64Process2`・Ollama の起動と取得）は、Linux 上の Ollama v0.40.17 の動作確認（`/api/version`・Host ヘッダ検査・`OLLAMA_NO_CLOUD`・`/api/pull` の NDJSON・`/v1/chat/completions`）に基づくもので、**実機の Windows では未確認**
 
 ## 8. 主要な設計判断

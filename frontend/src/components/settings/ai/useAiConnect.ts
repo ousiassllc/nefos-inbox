@@ -44,7 +44,9 @@ export function useAiConnect(deps: AiConnectDeps) {
   /** 保存済みの Base URL（openai・ローカルAI（external）だけ）。同意はこの送信先に対して取る。 */
   const baseUrl = computed(() => providerBaseUrl(provider.value, cfg.value))
   const consented = computed(() => (cfg.value?.consentedProviders ?? []).includes(provider.value))
-  const destination = computed(() => aiDestination(provider.value, baseUrl.value))
+  const destination = computed(() =>
+    aiDestination(provider.value, baseUrl.value, cfg.value?.local?.loopback),
+  )
   const consentText = computed(() => {
     const label = providerLabel(provider.value)
     return consented.value ? msg.ai.consentGiven(label) : msg.ai.consentNeeded(label)

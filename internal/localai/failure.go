@@ -32,3 +32,12 @@ func scrubURL(err error) error {
 	}
 	return &url.Error{Op: ue.Op, URL: "(invalid)", Err: ue.Err}
 }
+
+// UserMessage は err が画面に出してよい日本語の理由を持つなら、それを返す（localai が failure で作った失敗。パス・URL を含まない）。
+func UserMessage(err error) (string, bool) {
+	var fe *failureError
+	if errors.As(err, &fe) {
+		return fe.msg, true
+	}
+	return "", false
+}

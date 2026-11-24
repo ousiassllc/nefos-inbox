@@ -2,6 +2,11 @@ package localtests
 
 import (
 	"context"
+	"fmt"
+	"net"
+	"runtime"
+	"sync/atomic"
+	"syscall"
 	"testing"
 	"time"
 
@@ -9,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ousiassllc/nefos-inbox/internal/ai"
+	"github.com/ousiassllc/nefos-inbox/internal/app/apptest"
 	"github.com/ousiassllc/nefos-inbox/internal/app/dto"
 )
 
@@ -66,4 +72,50 @@ func TestInboxZeroLocalAcquireFailureAborts(t *testing.T) {
 	_, err = f.svc.FindInboxZeroCandidates(t.Context(), []dto.ThreadRef{f.ref}, "iz-1")
 	requireCode(t, "AI_FAILED", err)
 	assert.Zero(t, f.Classifier.Calls())
+}
+
+// ローカルAIの判定は 1 件ずつ（ほかのプロバイダは同時に 4 件まで）。
+func TestInboxZeroLocalJudgesOneAtATime(t *testing.T) {
+	f := newFixture(t)
+	_, err := f.svc.SetAIFeature(t.Context(), dto.AIFeatureInboxZero, "local", "gemma4:e2b", "")
+	require.NoError(t, err)
+	_, err = f.svc.SetInboxZeroReasons(t.Context(), dto.InboxZeroReasons{Ad: true})
+	require.NoError(t, err)
+	refs := []dto.ThreadRef{f.ref}
+	for i := range 7 {
+		id := fmt.Sprintf("x%d", i)
+		f.PutThread(t, f.ref.AccountID, id, apptest.Msg("m"+id, id, apptest.Epoch, "INBOX"))
+		refs = append(refs, dto.ThreadRef{AccountID: f.ref.AccountID, ThreadID: id})
+	}
+
+	var cur, peak atomic.Int32
+	f.Classifier.Fn = func(context.Context, ai.ClassifyInput) (ai.ClassifyAnswer, error) {
+		n := cur.Add(1)
+		defer cur.Add(-1)
+		for old := peak.Load(); n > old && !peak.CompareAndSwap(old, n); old = peak.Load() {
+		}
+		for range 200 { // 重なる機会を与える（固定時間の待ちは使わない）
+			runtime.Gosched()
+		}
+		return ai.ClassifyAnswer{Choice: "other", Probabilities: map[string]float64{"other": 0.9}}, nil
+	}
+	_, err = f.svc.FindInboxZeroCandidates(t.Context(), refs, "iz-1")
+	require.NoError(t, err)
+	assert.Equal(t, 8, f.Classifier.Calls())
+	assert.Equal(t, int32(1), peak.Load(), "ローカルAIは同時に 1 件")
+}
+
+// サーバーに接続できない（net.Error）ときは、どのスレッドでも同じ結果なので全体を止める。
+func TestInboxZeroLocalConnectionRefusedAborts(t *testing.T) {
+	f := newFixture(t)
+	_, err := f.svc.SetAIFeature(t.Context(), dto.AIFeatureInboxZero, "local", "gemma4:e2b", "")
+	require.NoError(t, err)
+	_, err = f.svc.SetInboxZeroReasons(t.Context(), dto.InboxZeroReasons{Ad: true})
+	require.NoError(t, err)
+	f.Classifier.Fn = func(context.Context, ai.ClassifyInput) (ai.ClassifyAnswer, error) {
+		return ai.ClassifyAnswer{}, &net.OpError{Op: "dial", Net: "tcp", Err: syscall.ECONNREFUSED}
+	}
+	_, err = f.svc.FindInboxZeroCandidates(t.Context(), []dto.ThreadRef{f.ref}, "iz-1")
+	ae := requireError(t, "AI_FAILED", err)
+	assert.Equal(t, "ローカルAIのサーバーに接続できませんでした。起動しているか確かめてください。", ae.Message)
 }

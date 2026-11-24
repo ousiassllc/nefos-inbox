@@ -3,6 +3,8 @@ package localtests
 import (
 	"context"
 	"errors"
+	"net"
+	"syscall"
 	"testing"
 	"time"
 
@@ -125,7 +127,12 @@ func TestLocalPrecheckMatrix(t *testing.T) {
 	for _, c := range []tc{
 		{"managed 未導入", notInstalled, "AI_NOT_CONFIGURED", "ローカルAI（Ollama）を設定画面の「AI のつなぎ先」で導入してください。"},
 		{"この OS では使えない", func(f *fixture) { f.setCaps(capability.Android()) }, "UNSUPPORTED", ""},
-		{"Runtime が無い", func(f *fixture) { f.Deps.LocalAI = nil }, "UNSUPPORTED", ""},
+		{"Runtime が無い（保存先を決められなかった）", func(f *fixture) { f.Deps.LocalAI = nil }, "AI_FAILED", "ローカルAIの保存先を決められませんでした。"},
+		{"選んだモデルが未取得", func(f *fixture) {
+			st := f.local.Status()
+			st.Models[0].Installed = false
+			f.local.SetStatus(st)
+		}, "AI_NOT_CONFIGURED", "選んだモデルを、設定画面の「AI のつなぎ先」のローカルAIで取得してください。"},
 		{"Runtime が使えない環境", func(f *fixture) {
 			f.local.SetStatus(localai.Status{Supported: false, UnsupportedReason: "メモリが足りません。"})
 		}, "UNSUPPORTED", "メモリが足りません。"},
@@ -166,4 +173,34 @@ func TestExternalNonLoopbackWithConsentGenerates(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, f.summarize(t))
 	assert.Equal(t, "https://lm.example.com/v1", f.provider.made[0].baseURL)
+}
+
+// カタログ外のモデル名は Ollama に任せる（取得済みかを見ない）。
+func TestUncatalogedModelIsLeftToOllama(t *testing.T) {
+	f := newFixture(t)
+	_, err := f.svc.SetAIFeature(t.Context(), dto.AIFeatureThreadAI, "local", "llama3:8b", "")
+	require.NoError(t, err)
+	require.NoError(t, f.summarize(t))
+	assert.Equal(t, "llama3:8b", f.provider.made[0].model)
+}
+
+// 接続拒否など（net.Error。取り消し・期限切れでない）は OFFLINE ではなく、サーバーに接続できない AI_FAILED（再試行可）。
+func TestLocalConnectionRefusedIsAIFailed(t *testing.T) {
+	for _, setup := range []func(f *fixture){
+		func(*fixture) {},
+		func(f *fixture) {
+			_, err := f.svc.SetAILocalConnection(context.Background(), "external", "http://localhost:1234/v1")
+			require.NoError(t, err)
+		},
+	} {
+		f := newFixture(t)
+		f.selectLocal(t)
+		setup(f)
+		f.provider.fn = func(context.Context) (string, error) {
+			return "", &net.OpError{Op: "dial", Net: "tcp", Err: syscall.ECONNREFUSED}
+		}
+		ae := requireError(t, "AI_FAILED", f.summarize(t))
+		assert.True(t, ae.Retryable)
+		assert.Equal(t, "ローカルAIのサーバーに接続できませんでした。起動しているか確かめてください。", ae.Message)
+	}
 }

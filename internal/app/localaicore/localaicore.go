@@ -39,6 +39,9 @@ func New(d *deps.Deps) *Service { return &Service{d: d} }
 // runtime は使える Runtime。nil は UNSUPPORTED。
 func (s *Service) runtime() (localai.Runtime, error) {
 	if s.d.LocalAI == nil {
+		if s.d.Capabilities.SupportsLocalAI { // 使える OS なのに管理が無い＝置き場所を決められなかった
+			return nil, apperr.New(apperr.AIFailed, localconn.NoStorageMessage)
+		}
 		return nil, apperr.New(apperr.Unsupported, localai.ErrUnsupported.Error())
 	}
 	return s.d.LocalAI, nil

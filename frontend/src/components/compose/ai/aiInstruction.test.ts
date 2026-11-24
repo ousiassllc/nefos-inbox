@@ -26,7 +26,7 @@ function mountButton(consented = true) {
     consentedProviders: consented ? ['anthropic'] : [],
     chatgptSignedIn: false,
     chatgptAccounts: [],
-    local: { mode: 'managed', baseUrl: '', ready: false },
+    local: { mode: 'managed', baseUrl: '', ready: false, loopback: true },
   }
   const calls: { sessionId: string; instruction: string | undefined }[] = []
   settings.generateReplyDraft = async (
@@ -115,7 +115,7 @@ describe('AiDraftButton の「AI への指示」欄', () => {
       consentedProviders: ['chatgpt'],
       chatgptSignedIn: true,
       chatgptAccounts: [],
-      local: { mode: 'managed', baseUrl: '', ready: false },
+      local: { mode: 'managed', baseUrl: '', ready: false, loopback: true },
     }
     const w = mount(AiDraftButton, { props: { sessionId: 's1' }, attachTo: document.body })
     await flushPromises()
