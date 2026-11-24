@@ -19,6 +19,7 @@ export const settingsLocalAi = {
   unsupportedBack: '「AI のつなぎ先」の一覧へ戻る',
   statusLoading: 'ローカルAIの状態を確認しています…',
   statusFailed: 'ローカルAIの状態を取得できませんでした。',
+  reload: '再読み込み',
   // 未導入・導入中
   notInstalledHeading: 'Ollama をまだ導入していません',
   notInstalledDetail: (version: string, size: string) =>
@@ -75,8 +76,9 @@ export const settingsLocalAi = {
   baseUrlRequired: 'Base URL を入力してください。',
   test: '接続テスト',
   testOk: (n: number) => `接続できました（モデル ${n} 件）`,
-  testNone: '接続できましたが、モデルが見つかりませんでした。',
+  testNone: '接続できましたが、モデルがありません。',
   testFailed: '接続テストに失敗しました。',
+  externalSaveNote: 'このつなぎ方は、Base URL を「保存」すると有効になります。',
   externalLoopbackNote:
     '送信先がこの PC の中（localhost など）なので、メールの内容はこの PC の外へ送られません。',
   externalUnsetNote: 'Base URL を保存するまで、ローカルAIとしては使えません。',

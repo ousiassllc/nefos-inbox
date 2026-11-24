@@ -31,15 +31,25 @@ export const useLocalAiStore = defineStore('localAi', () => {
   const error = ref<string>()
   /** 操作（導入・取得・中止・停止・削除）を呼び出している間。 */
   const busy = ref(false)
-  /** 状態を反映するたびに増える。最初の取得より先にイベントが届いたとき、古い取得結果で上書きしないための印。 */
+  /** 状態を反映するたびに増える。取得・操作の結果より先に新しいイベントが届いたとき、古い結果で上書きしないための印。 */
   let revision = 0
+  /** 購読している画面の数（設定ダイアログ・ローカルAIのページ）。0 → 1 で購読し、1 → 0 で解除する。 */
+  let subscribers = 0
+  let off: (() => void) | undefined
 
   const job = computed(() => status.value?.job ?? undefined)
   const models = computed(() => list(status.value?.models))
 
+  /** 接続済み（`local.ready`）を左右する値。導入済みか・取得済みのモデルの数。 */
+  const readyKey = (s?: LocalAIStatus) =>
+    s ? `${s.installed}|${list(s.models).filter((m) => m.installed).length}` : ''
+
   function apply(s: LocalAIStatus): void {
+    const before = readyKey(status.value)
     revision++
     status.value = normalize(s)
+    // 導入・モデルの取得・削除が（どの画面にいても）終わったら、つなぎ先の一覧・機能の選択肢の「接続済み」を取り直す。最初の取得（before が空）では取り直さない。
+    if (before !== '' && before !== readyKey(status.value)) void refreshConfig()
   }
 
   async function refresh(): Promise<void> {
@@ -47,16 +57,29 @@ export const useLocalAiStore = defineStore('localAi', () => {
     try {
       const s = await call(LocalAIService.GetLocalAIStatus())
       if (rev === revision) apply(s)
+      error.value = undefined
     } catch (e) {
       error.value = parseBindingError(e).message || msg.ai.local.statusFailed
     }
   }
 
-  /** 状態を読み込み、`localai:status` を購読する。返す関数で購読を解除する（ページを閉じるとき）。 */
+  /**
+   * 状態を読み込み、`localai:status` を購読する。返す関数で購読を解除する（画面を閉じるとき。何度呼んでもよい）。
+   * 設定ダイアログが開いている間とローカルAIのページが開いている間、それぞれ呼ぶ。購読は最後の 1 つが解除されるまで 1 つだけ。
+   */
   function start(): () => void {
-    const off = onEvent<LocalAIStatus>(EVENTS.LOCAL_AI_STATUS, apply)
+    error.value = undefined
+    if (subscribers++ === 0) off = onEvent<LocalAIStatus>(EVENTS.LOCAL_AI_STATUS, apply)
     void refresh()
-    return off
+    let released = false
+    return () => {
+      if (released) return
+      released = true
+      if (--subscribers === 0) {
+        off?.()
+        off = undefined
+      }
+    }
   }
 
   /** 操作を 1 つ呼び、返った状態を反映する。失敗は `error` に入れる（投げない）。 */
@@ -64,8 +87,10 @@ export const useLocalAiStore = defineStore('localAi', () => {
     if (busy.value) return
     error.value = undefined
     busy.value = true
+    const rev = revision
     try {
-      apply(await call(op()))
+      const s = await call(op())
+      if (rev === revision) apply(s) // 呼び出しの間に新しいイベントが届いていれば、そちらが新しい
     } catch (e) {
       error.value = parseBindingError(e).message
     } finally {
@@ -80,7 +105,7 @@ export const useLocalAiStore = defineStore('localAi', () => {
   const deleteModel = (name: string) => run(() => LocalAIService.DeleteLocalAIModel(name))
   const remove = () => run(() => LocalAIService.RemoveLocalAI())
 
-  /** 設定（aiConfig）を取り直す。導入・モデルの取得で `local.ready` が変わったとき、つなぎ先の一覧・機能の選択肢へ反映する。失敗しても画面は今のまま。 */
+  /** 設定（aiConfig）を取り直す。導入・モデルの取得で `local.ready` が変わったとき（と、つなぎ先・機能のタブを開いたとき）、つなぎ先の一覧・機能の選択肢へ反映する。失敗しても画面は今のまま。 */
   async function refreshConfig(): Promise<void> {
     try {
       settings.aiConfig = normalizeAIConfig(await call(AIService.GetAIConfig()))

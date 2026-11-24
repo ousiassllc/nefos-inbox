@@ -26,7 +26,7 @@ function mountNew(consented = true) {
     consentedProviders: consented ? ['anthropic'] : [],
     chatgptSignedIn: false,
     chatgptAccounts: [],
-    local: { mode: 'managed', baseUrl: '', ready: false },
+    local: { mode: 'managed', baseUrl: '', ready: false, loopback: true },
   }
   const newCalls: NewCall[] = []
   settings.generateNewDraft = async (sessionId, _requestId, instruction, content) => {
@@ -130,7 +130,7 @@ describe('新規作成の「AI で下書き」（#365）', () => {
       consentedProviders: ['anthropic'],
       chatgptSignedIn: false,
       chatgptAccounts: [],
-      local: { mode: 'managed', baseUrl: '', ready: false },
+      local: { mode: 'managed', baseUrl: '', ready: false, loopback: true },
     }
     const replyCalls: string[] = []
     let newCalls = 0

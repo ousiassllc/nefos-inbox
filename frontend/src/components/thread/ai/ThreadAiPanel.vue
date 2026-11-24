@@ -34,7 +34,7 @@ const truncated = computed(() => {
 })
 const destination = computed(() => {
   const c = settings.aiConfig
-  return c ? aiDestination(c.features.threadAi.provider, providerBaseUrl(c.features.threadAi.provider, c)) : undefined
+  return c ? aiDestination(c.features.threadAi.provider, providerBaseUrl(c.features.threadAi.provider, c), c.local?.loopback) : undefined
 })
 
 const end = ref<HTMLElement>()

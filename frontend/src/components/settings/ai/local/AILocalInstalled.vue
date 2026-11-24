@@ -9,7 +9,7 @@ import AIStatusChip from '../providers/AIStatusChip.vue'
 import LocalAIModelRow from './LocalAIModelRow.vue'
 
 // 導入済みのローカルAI（#458）。Ollama の状態（起動中／停止中・「停止」）、モデルの一覧（取得・中止・削除）、「ローカルAIを削除」。
-// 削除は、どちらも確認のうえ行う（モデルの削除・ローカルAIの削除）。ジョブ中は「ローカルAIを削除」を押せない（Go も拒む）。
+// 削除は、どちらも確認のうえ行う（モデルの削除・ローカルAIの削除）。ジョブ中は「停止」「ローカルAIを削除」を押せない（Go も拒む）。
 const props = defineProps<{ status: LocalAIStatus }>()
 const store = useLocalAiStore()
 const t = msg.ai.local
@@ -42,7 +42,7 @@ async function confirmRemove(): Promise<void> {
         v-if="props.status.running"
         variant="secondary"
         size="sm"
-        :disabled="store.busy"
+        :disabled="store.busy || props.status.job != null"
         data-testid="local-ai-stop"
         @click="store.stop()"
       >

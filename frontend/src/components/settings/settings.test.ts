@@ -64,7 +64,7 @@ describe('AISettings', () => {
       consentedProviders: [],
       chatgptSignedIn: false,
       chatgptAccounts: [],
-      local: { mode: 'managed', baseUrl: '', ready: false },
+      local: { mode: 'managed', baseUrl: '', ready: false, loopback: true },
     }
     settings.aiConfig = cfg
     const w = mount(AISettings, { props: { provider: 'openai' }, global: { plugins: [pinia] } })

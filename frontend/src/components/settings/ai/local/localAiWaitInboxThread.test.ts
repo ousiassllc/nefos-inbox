@@ -28,7 +28,7 @@ function configure(provider: 'local' | 'anthropic') {
     ),
     apiKeyProviders: ['anthropic'],
     consentedProviders: ['anthropic', 'local'],
-    local: { mode: 'managed', baseUrl: '', ready: true },
+    local: { mode: 'managed', baseUrl: '', ready: true, loopback: true },
   }
 }
 

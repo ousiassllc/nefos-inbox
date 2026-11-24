@@ -19,6 +19,8 @@ const t = msg.ai.local
 const savedMode = computed<'managed' | 'external'>(() => (store.aiConfig?.local?.mode === 'external' ? 'external' : 'managed'))
 const mode = ref<'managed' | 'external'>(savedMode.value)
 const error = ref<string>()
+/** external の Base URL の入力中の値。managed に切り替えて戻っても（このページを開いている間は）消さない。 */
+const externalDraft = ref<string>()
 // 設定の読み込みが遅れて保存済みのつなぎ方が分かったとき・保存で変わったときは、それに合わせる。
 watch(savedMode, (m) => (mode.value = m))
 const labelId = useId()
@@ -81,7 +83,10 @@ onMounted(() => {
       <p class="note" data-testid="local-ai-note">{{ t.noKeyNote }}</p>
       <AILocalManagedSection />
     </template>
-    <AILocalExternalSection v-else />
+    <template v-else>
+      <p v-if="savedMode !== 'external'" class="note" data-testid="local-ai-external-save-note">{{ t.externalSaveNote }}</p>
+      <AILocalExternalSection v-model:draft="externalDraft" />
+    </template>
   </section>
 </template>
 

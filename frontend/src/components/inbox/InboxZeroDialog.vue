@@ -26,7 +26,7 @@ const count = computed(() => zero.checkedCandidates.length)
 /** 同意を求める送信先（選んだ AI。同意の画面は未選択では開かない）。 */
 const dest = computed(() => {
   const t = zero.consentTarget
-  return t ? aiDestination(t.provider, t.baseUrl) : undefined
+  return t ? aiDestination(t.provider, t.baseUrl, t.loopback) : undefined
 })
 
 function onConsentOpen(open: boolean): void {

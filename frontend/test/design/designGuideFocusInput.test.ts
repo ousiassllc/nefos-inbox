@@ -142,7 +142,7 @@ describe('AiDraftButton の無効の理由（#264）', () => {
       consentedProviders: [],
       chatgptSignedIn: false,
       chatgptAccounts: [],
-      local: { mode: 'managed', baseUrl: '', ready: false },
+      local: { mode: 'managed', baseUrl: '', ready: false, loopback: true },
     }
     const w = mount(AiDraftButton, { props: { sessionId: 's1' }, attachTo: document.body })
     const button = w.get('button.btn')
@@ -165,7 +165,7 @@ describe('AiDraftButton の無効の理由（#264）', () => {
       consentedProviders: ['openai'],
       chatgptSignedIn: false,
       chatgptAccounts: [],
-      local: { mode: 'managed', baseUrl: '', ready: false },
+      local: { mode: 'managed', baseUrl: '', ready: false, loopback: true },
     }
     const w = mount(AiDraftButton, { props: { sessionId: 's1' }, attachTo: document.body })
     expect(w.find('.ai-note').exists()).toBe(false)

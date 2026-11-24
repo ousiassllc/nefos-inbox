@@ -89,7 +89,7 @@ describe('利用枠の超過（#80）', () => {
       consentedProviders: ['chatgpt'],
       chatgptSignedIn: true,
       chatgptAccounts: [],
-      local: { mode: 'managed', baseUrl: '', ready: false },
+      local: { mode: 'managed', baseUrl: '', ready: false, loopback: true },
     }
     const opened: string[] = []
     store.openExternal = async (url: string) => {
@@ -116,7 +116,7 @@ describe('利用枠の超過（#80）', () => {
       consentedProviders: ['chatgpt'],
       chatgptSignedIn: true,
       chatgptAccounts: [],
-      local: { mode: 'managed', baseUrl: '', ready: false },
+      local: { mode: 'managed', baseUrl: '', ready: false, loopback: true },
     }
     const cancelled: string[] = []
     store.cancelGenerate = async (id: string) => {

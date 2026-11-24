@@ -23,7 +23,7 @@ function mountDraft(draftProvider: 'local' | 'anthropic', ready = true) {
     features: features({ provider: draftProvider, model: 'm' }),
     apiKeyProviders: draftProvider === 'anthropic' ? ['anthropic'] : [],
     consentedProviders: ['anthropic', 'local'],
-    local: { mode: 'managed', baseUrl: '', ready },
+    local: { mode: 'managed', baseUrl: '', ready, loopback: true },
   }
   let finish: () => void = () => undefined
   const generated: string[] = []

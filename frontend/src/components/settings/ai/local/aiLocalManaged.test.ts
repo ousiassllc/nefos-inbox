@@ -231,7 +231,9 @@ describe('ローカルAI（managed）の状態ごとの表示（#458）', () => 
   test('導入・取得で接続済み（ready）が変わったら、設定（aiConfig）を取り直す', async () => {
     await open(installedStatus())
     expect(callsOf('GetAIConfig')).toHaveLength(0)
-    ctl.responses.GetAIConfig = aiConfig({ local: { mode: 'managed', baseUrl: '', ready: true } })
+    ctl.responses.GetAIConfig = aiConfig({
+      local: { mode: 'managed', baseUrl: '', ready: true, loopback: true },
+    })
     emitStatus(installedStatus(['gemma4:e4b']))
     await flushPromises()
     expect(callsOf('GetAIConfig')).toHaveLength(1)

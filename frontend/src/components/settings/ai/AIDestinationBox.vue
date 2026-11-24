@@ -8,12 +8,14 @@ import { aiDestination } from './aiDestination'
 const props = defineProps<{
   provider: string
   baseUrl?: string
+  /** 保存済みのローカルAIの送信先が PC の中か（Go の値）。編集中の値は文字列から判定する。 */
+  loopback?: boolean
   /** 編集中（未保存）の値。保存済みと異なる場合は差を明示する。 */
   draftProvider: string
   draftBaseUrl: string
 }>()
 
-const saved = computed(() => aiDestination(props.provider, props.baseUrl))
+const saved = computed(() => aiDestination(props.provider, props.baseUrl, props.loopback))
 const draft = computed(() => aiDestination(props.draftProvider, props.draftBaseUrl))
 const differs = computed(
   () => draft.value.providerLabel !== saved.value.providerLabel || draft.value.url !== saved.value.url,

@@ -3,7 +3,6 @@ package aicore
 import (
 	"context"
 	"encoding/json"
-	"net/url"
 	"slices"
 	"strings"
 
@@ -40,42 +39,17 @@ type storedAIConsent struct {
 	Providers []consentEntry `json:"providers,omitempty"`
 }
 
-// hostKey は Base URL の送信先（scheme://ホスト。小文字・既定ポートと末尾のドットを除く。パスは含めない）。
-// 空は既定の送信先 def。scheme を含めるので https→http の変更（平文化）も別の送信先になる。
-func hostKey(raw, def string) string {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return def
-	}
-	u, err := url.Parse(raw)
-	if err != nil || u.Host == "" {
-		return "invalid:" + raw
-	}
-	host := strings.TrimSuffix(strings.ToLower(u.Hostname()), ".")
-	if strings.Contains(host, ":") {
-		host = "[" + host + "]"
-	}
-	port := u.Port()
-	if (u.Scheme == "https" && port == "443") || (u.Scheme == "http" && port == "80") {
-		port = ""
-	}
-	if port != "" {
-		host += ":" + port
-	}
-	return u.Scheme + "://" + host
-}
-
 // destination は同意の照合キー（プロバイダ＋送信先 scheme://ホスト）。anthropic に Base URL は無い。
 func destination(provider, baseURL string) string {
 	switch provider {
 	case providerOpenAI:
-		return provider + "|" + hostKey(baseURL, defaultOpenAIHost)
+		return provider + "|" + aiinput.HostKey(baseURL, defaultOpenAIHost)
 	case providerChatGPT:
 		return provider + "|" + defaultChatGPTHost
 	case providerTypeSafe:
 		return provider + "|" + defaultTypeSafeHost
 	case providerLocal:
-		return provider + "|" + hostKey(baseURL, "") // 既定の送信先は無い（Base URL は external のときだけ）
+		return provider + "|" + aiinput.HostKey(baseURL, "") // 既定の送信先は無い（Base URL は external のときだけ）
 	}
 	return provider + "|" + defaultAnthropicHost
 }
