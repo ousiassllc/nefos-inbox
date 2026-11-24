@@ -147,7 +147,7 @@ func (r *inboxZeroRun) execute(runCtx context.Context, refs []dto.ThreadRef) (dt
 	r.abort = abort
 
 	slots := make([]slot, len(refs))
-	sem := make(chan struct{}, inboxZeroConcurrency)
+	sem := make(chan struct{}, r.concurrency())
 	var wg sync.WaitGroup
 	for i, ref := range refs {
 		sem <- struct{}{}
@@ -243,16 +243,6 @@ func (r *inboxZeroRun) judge(ctx context.Context, ref dto.ThreadRef) slot {
 	}
 	cand.Reason = reason
 	return slot{cand: &cand}
-}
-
-// classifyFailure は AI の失敗を扱う。認証（401／403）・レート制限（429）・ChatGPT の利用上限・対象外は、
-// どのスレッドでも同じ結果になるので全体を止め、それ以外は該当スレッドだけ skipped にする。
-func (r *inboxZeroRun) classifyFailure(err error) slot {
-	if errors.Is(err, ai.ErrUnauthorized) || errors.Is(err, ai.ErrRateLimited) || errors.Is(err, ai.ErrUsageLimit) || errors.Is(err, ai.ErrNotEligible) {
-		r.fail(r.s.mapProviderError(r.provider, "", err))
-		return slot{}
-	}
-	return slot{skipped: true}
 }
 
 // aiEligible は AI の判定で候補にできる理由（オンのもの。ニュースレターはスレッドが未読のときだけ）。

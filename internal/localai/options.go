@@ -17,6 +17,11 @@ const (
 	// DefaultReadyTimeout は起動してから /api/version が 200 を返すまで待つ最長の時間。
 	DefaultReadyTimeout = 60 * time.Second
 
+	// DefaultStallTimeout はダウンロードでバイトが 1 つも届かないまま待つ最長の時間（超えたら止める）。
+	DefaultStallTimeout = 60 * time.Second
+	// responseHeaderTimeout は既定の通信で、要求を送ってから応答のヘッダーを待つ最長の時間。
+	responseHeaderTimeout = 30 * time.Second
+
 	// progressInterval は OnChange をバイト進捗で呼ぶ最短の間隔（段階・状態の変化は即時）。
 	progressInterval = 250 * time.Millisecond
 
@@ -61,6 +66,8 @@ type Options struct {
 	// IdleTimeout・ReadyTimeout は DefaultIdleTimeout・DefaultReadyTimeout。
 	IdleTimeout  time.Duration
 	ReadyTimeout time.Duration
+	// StallTimeout はダウンロードで進みが止まったと見なす時間（既定は DefaultStallTimeout。テストで短縮する）。
+	StallTimeout time.Duration
 
 	// Pin は固定版（テスト用。ゼロ値なら types.go の値）。
 	Pin RuntimePin
@@ -94,6 +101,7 @@ type resolved struct {
 	onChange     func(Status)
 	idleTimeout  time.Duration
 	readyTimeout time.Duration
+	stall        time.Duration
 	pin          RuntimePin
 	catalog      []CatalogModel
 	allow        func(*url.URL) bool
@@ -115,6 +123,10 @@ func resolve(o Options) resolved {
 	}
 	if r.readyTimeout <= 0 {
 		r.readyTimeout = DefaultReadyTimeout
+	}
+	r.stall = o.StallTimeout
+	if r.stall <= 0 {
+		r.stall = DefaultStallTimeout
 	}
 	if r.pin.URL == "" {
 		r.pin = defaultPin()
@@ -138,6 +150,11 @@ func resolve(o Options) resolved {
 	client := http.Client{}
 	if o.HTTPClient != nil {
 		client = *o.HTTPClient
+	}
+	if client.Transport == nil { // 既定の通信は、応答のヘッダーが来ないまま待ち続けない
+		tr := http.DefaultTransport.(*http.Transport).Clone()
+		tr.ResponseHeaderTimeout = responseHeaderTimeout
+		client.Transport = tr
 	}
 	client.CheckRedirect = r.checkRedirect
 	r.hc = &client

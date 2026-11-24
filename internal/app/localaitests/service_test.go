@@ -3,16 +3,21 @@ package localaitests
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/ousiassllc/nefos-inbox/internal/app"
+	"github.com/ousiassllc/nefos-inbox/internal/app/aicore/localconn"
 	"github.com/ousiassllc/nefos-inbox/internal/app/apperr"
 	"github.com/ousiassllc/nefos-inbox/internal/app/apptest"
 	"github.com/ousiassllc/nefos-inbox/internal/app/dto"
 	"github.com/ousiassllc/nefos-inbox/internal/app/localaicore"
+	"github.com/ousiassllc/nefos-inbox/internal/capability"
 	"github.com/ousiassllc/nefos-inbox/internal/localai"
 )
 
@@ -33,9 +38,10 @@ func requireAppErr(t *testing.T, code string, err error) *apperr.Error {
 	return ae
 }
 
-// Runtime が無い（使えない OS・未配線）なら、どの操作も UNSUPPORTED。
+// Runtime が無い使えない OS（capability なし）なら、どの操作も UNSUPPORTED。
 func TestNilRuntimeIsUnsupported(t *testing.T) {
 	e := apptest.NewEnv(t)
+	e.Deps.Capabilities = capability.Android()
 	e.Deps.LocalAI = nil
 	svc := app.NewLocalAIService(e.Deps)
 	ctx := t.Context()
@@ -135,4 +141,43 @@ func TestToDTO(t *testing.T) {
 	assert.Equal(t, []dto.LocalAIModel{{Name: c.Name, DisplayName: c.DisplayName, Description: c.Description, License: c.License, SizeBytes: c.SizeBytes, Installed: true}}, got.Models)
 	assert.Equal(t, "メモリが足りません。", got.UnsupportedReason)
 	assert.Equal(t, "失敗", got.LastError)
+}
+
+// localai が画面向けの理由つきで返した失敗（起動できない）は、その理由のまま AI_FAILED にする。
+func TestMapErrorKeepsLocalAIFailureMessage(t *testing.T) {
+	dir := t.TempDir()
+	rt := filepath.Join(dir, "runtime")
+	require.NoError(t, os.MkdirAll(rt, 0o700))
+	bin := "ollama"
+	if runtime.GOOS == "windows" {
+		bin = "ollama.exe"
+	}
+	require.NoError(t, os.WriteFile(filepath.Join(rt, bin), []byte("x"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(rt, "VERSION"), []byte(localai.RuntimeVersion+"\n"), 0o600))
+	m := localai.New(localai.Options{
+		Dir: dir, Support: func() (bool, string) { return true, "" },
+		Launcher: func(localai.LaunchSpec) (localai.Process, error) { return nil, errors.New("boom") },
+	})
+	t.Cleanup(m.Close)
+	_, _, err := m.Acquire(t.Context())
+	require.Error(t, err)
+
+	ae := localconn.MapError(err)
+	assert.Equal(t, "AI_FAILED", ae.Code)
+	assert.Equal(t, "ローカルAI（Ollama）を起動できませんでした。", ae.Message)
+	assert.NotContains(t, ae.Message, "boom")
+
+	other := localconn.MapError(errors.New("x"))
+	assert.Equal(t, "ローカルAI（Ollama）を使えませんでした。起動や取得に失敗しています。", other.Message)
+}
+
+// 使える OS（capability あり）なのに Runtime が無い（置き場所を決められなかった）ときは UNSUPPORTED ではなく AI_FAILED。
+func TestNilRuntimeOnSupportedOSIsStorageFailure(t *testing.T) {
+	e := apptest.NewEnv(t)
+	e.Deps.Capabilities = capability.Desktop("windows")
+	e.Deps.LocalAI = nil
+	svc := app.NewLocalAIService(e.Deps)
+	_, err := svc.GetLocalAIStatus()
+	ae := requireAppErr(t, "AI_FAILED", err)
+	assert.Equal(t, "ローカルAIの保存先を決められませんでした。", ae.Message)
 }

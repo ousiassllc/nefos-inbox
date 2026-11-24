@@ -8,6 +8,9 @@ type AILocalConnection struct {
 	BaseURL string `json:"baseUrl"`
 	// Ready はローカルAIを選べる状態か。managed は導入済みでモデルが 1 つ以上取得済み、external は Base URL が有効。
 	Ready bool `json:"ready"`
+	// Loopback は送信先が PC の外へ出ないか（managed、または BaseURL の host が localhost／127.0.0.1／::1 の external）。
+	// 同意の要否（loopback 以外は同意が要る）の判定と同じ関数で求める。画面はこの値で同意の欄を出す。
+	Loopback bool `json:"loopback"`
 }
 
 // ローカルAIのつなぎ方（AILocalConnection.Mode）。

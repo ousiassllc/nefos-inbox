@@ -60,6 +60,9 @@ func (s *Service) precheckLocal(ctx context.Context, label string, sel SelectedA
 			return sel, "", apperr.New(apperr.AIConsentRequired, "スレッドの内容が AI プロバイダへ送信されることへの同意が必要です。")
 		}
 	}
+	if err := localconn.CheckModel(s.d.LocalAI, conn, sel.Model); err != nil {
+		return sel, "", err
+	}
 	if conn.Managed() {
 		return sel, "", nil // アプリが用意する Ollama はキーを使わない
 	}
