@@ -101,7 +101,7 @@ func TestInboxZeroLocalJudgesOneAtATime(t *testing.T) {
 	}
 	_, err = f.svc.FindInboxZeroCandidates(t.Context(), refs, "iz-1")
 	require.NoError(t, err)
-	assert.Equal(t, int32(8), int32(f.Classifier.Calls()))
+	assert.Equal(t, 8, f.Classifier.Calls())
 	assert.Equal(t, int32(1), peak.Load(), "ローカルAIは同時に 1 件")
 }
 
