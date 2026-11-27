@@ -6,8 +6,7 @@ import type {
 } from '../../bindings/github.com/ousiassllc/nefos-inbox/internal/app/dto'
 import * as NotifyService from '../../bindings/github.com/ousiassllc/nefos-inbox/internal/app/notifycore/notifyservice'
 import * as ThreadService from '../../bindings/github.com/ousiassllc/nefos-inbox/internal/app/threadservice'
-import { type AppError, call, list, parseBindingError } from '../lib/api'
-import { applyErrorEffects } from '../lib/errorEffects'
+import { type AppError, call, list } from '../lib/api'
 import {
   EVENTS,
   type NotifyOpenThreadPayload,
@@ -17,6 +16,7 @@ import {
 import { threadKey } from '../lib/inboxItems'
 import { thread as msg } from '../lib/messages'
 import { useAccountsStore } from './accounts'
+import { makeApi } from './apiCall'
 import { useInboxStore } from './inbox'
 import { useThreadExtras } from './threadExtras'
 import { useUiStore } from './ui'
@@ -64,21 +64,7 @@ export const useThreadStore = defineStore('thread', () => {
     currentRef.value ? threadKey(currentRef.value.accountId, currentRef.value.threadId) : undefined,
   )
 
-  function noteError(e: unknown): AppError {
-    const err = parseBindingError(e)
-    applyErrorEffects(err, { setOnline: ui.setOnline, markNeedsReauth: accounts.markNeedsReauth })
-    return err
-  }
-
-  async function api<T>(p: PromiseLike<T>): Promise<T> {
-    try {
-      const v = await call(p)
-      if (!ui.online) ui.setOnline(true)
-      return v
-    } catch (e) {
-      throw noteError(e)
-    }
-  }
+  const api = makeApi(ui, accounts.markNeedsReauth)
 
   function reset(): void {
     seq++
