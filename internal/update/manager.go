@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/ousiassllc/nefos-inbox/internal/logging"
 )
 
 // attemptFile は入れ替えのためにインストーラーを起動した版を記録するファイル（Dir 直下）。
@@ -187,7 +189,7 @@ func (m *Manager) Prepare(ctx context.Context, rel Release) (Staged, error) {
 	m.mu.Unlock()
 	m.changed(st)
 
-	staged, err := m.fetcher.Stage(ctx, rel)
+	staged, err := m.stage(ctx, rel)
 
 	m.mu.Lock()
 	m.downloading = ""
@@ -220,11 +222,18 @@ func (m *Manager) Prepare(ctx context.Context, rel Release) (Staged, error) {
 	return staged, nil
 }
 
+// stage は fetcher.Stage を呼ぶ。panic は記録して失敗として返し、Prepare の失敗処理（downloading の解除・failure の記録）に乗せる。
+func (m *Manager) stage(ctx context.Context, rel Release) (staged Staged, err error) {
+	defer logging.RecoverTo(m.log, "update stage", &err)
+	return m.fetcher.Stage(ctx, rel)
+}
+
 // PrepareAsync は Prepare をバックグラウンドで行う（手動確認の応答を待たせない）。失敗はログに残し、状態に反映する。
 func (m *Manager) PrepareAsync(rel Release) {
 	m.wg.Add(1)
 	go func() {
 		defer m.wg.Done()
+		defer logging.Recover(m.log, "update prepare") // OnChange の panic など、Prepare の外側用（呼び出し元の recover は届かない）
 		if _, err := m.Prepare(m.ctx, rel); err != nil && !errors.Is(err, ErrNotApplicable) && m.ctx.Err() == nil {
 			m.log.Warn("更新ファイルの用意に失敗", "version", rel.Version, "err", err)
 		}

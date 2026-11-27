@@ -42,6 +42,13 @@ func (f *fakeFetcher) Stage(_ context.Context, rel update.Release) (update.Stage
 	return update.Staged{Version: rel.Version, Path: path, SHA256: updatetest.Sum(f.content)}, nil
 }
 
+// panicFetcher は Stage の中で panic する。
+type panicFetcher struct{}
+
+func (panicFetcher) Stage(context.Context, update.Release) (update.Staged, error) {
+	panic("boom in stage")
+}
+
 func (f *fakeFetcher) Calls() int {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -246,6 +253,28 @@ func TestManagerPrepareAsync(t *testing.T) {
 	e.m.PrepareAsync(release("0.2.0"))
 	e.m.Close() // 実行中のものの完了を待つ
 	assert.NotNil(t, e.m.State().Staged)
+}
+
+// Stage が panic しても、プロセスは落ちず、ダウンロード中の表示が残らず、通常の失敗として扱う。
+func TestManagerPrepareAsyncRecoversStagePanic(t *testing.T) {
+	e := newManagerEnv(t, "0.1.0")
+	m := update.NewManager(update.ManagerOptions{
+		Fetcher: panicFetcher{}, Launch: func(string, update.LaunchOptions) error { return nil },
+		OnChange: func(s update.State) { e.states = append(e.states, s) },
+		Current:  "0.1.0", Dir: e.dir,
+	})
+	t.Cleanup(m.Close)
+
+	m.PrepareAsync(release("0.2.0"))
+	m.Close() // 実行中のものの完了を待つ
+
+	st := m.State()
+	assert.Empty(t, st.Downloading)
+	assert.Nil(t, st.Staged)
+	require.NotNil(t, st.Failure)
+	assert.Equal(t, "0.2.0", st.Failure.Version)
+	require.NotEmpty(t, e.states)
+	assert.Empty(t, e.states[len(e.states)-1].Downloading, "失敗も OnChange で伝える")
 }
 
 // 同じ版で失敗したあと成功したら、失敗の文面は消える（ready に失敗の文面が付かない）。

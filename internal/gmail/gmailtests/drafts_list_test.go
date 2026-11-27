@@ -3,8 +3,10 @@ package gmailtests
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -124,4 +126,41 @@ func TestListDraftsEmpty(t *testing.T) {
 	assert.NotNil(t, got.Items)
 	assert.Empty(t, got.Items)
 	assert.False(t, got.Truncated)
+}
+
+// panicTransport は path が panicPath で終わる要求の送信で panic する（下書きの取得ワーカーの中で起きる panic の注入）。
+type panicTransport struct{ panicPath string }
+
+func (p panicTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	if strings.HasSuffix(r.URL.Path, p.panicPath) {
+		panic("boom in drafts.get")
+	}
+	return http.DefaultTransport.RoundTrip(r)
+}
+
+// 下書きの取得ワーカー（別 goroutine）で panic しても、プロセスは落ちず、ListDrafts の失敗として返り、panic がログに残る。
+func TestListDraftsRecoversWorkerPanic(t *testing.T) {
+	buf := &lockedBuffer{}
+	e := newTestEnvWith(t, func(o *gmail.Options) {
+		o.HTTPClient = &http.Client{Transport: panicTransport{panicPath: "/drafts/d2"}}
+		o.Logger = slog.New(slog.NewJSONHandler(buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	})
+	e.f.HandleJSON("GET "+apiBase+"/drafts", 200, map[string]any{"drafts": []map[string]any{
+		{"id": "d1", "message": map[string]any{"id": "m", "threadId": "t"}}, {"id": "d2", "message": map[string]any{"id": "m", "threadId": "t"}},
+	}})
+	e.f.HandleJSON("GET "+apiBase+"/drafts/d1", 200, metadataDraft("d1", "t", "one", "", 1700000000000))
+
+	_, err := e.c.ListDrafts(context.Background(), testAccount, 100)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "panic in gmail list draft worker")
+
+	var panics int
+	for _, r := range buf.records(t) {
+		if r["msg"] == "panic" {
+			panics++
+			assert.Equal(t, "gmail list draft worker", r["where"])
+			assert.Contains(t, r["panic"], "boom in drafts.get")
+		}
+	}
+	assert.Equal(t, 1, panics, "panic レコードがスタック付きで 1 件残る")
 }
