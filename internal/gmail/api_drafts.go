@@ -11,6 +11,7 @@ import (
 	gmailapi "google.golang.org/api/gmail/v1"
 
 	"github.com/ousiassllc/nefos-inbox/internal/gmail/mimeparse"
+	"github.com/ousiassllc/nefos-inbox/internal/logging"
 )
 
 // draftFetchWorkers は ListDrafts が 1 アカウントの下書きを同時に取得する数。
@@ -44,7 +45,7 @@ func (c *client) ListDrafts(ctx context.Context, accountID string, limit int) (D
 		go func() {
 			defer wg.Done()
 			defer func() { <-sem }()
-			s, err := c.getDraftSummary(ctx, accountID, id)
+			s, err := c.getDraftSummarySafe(ctx, accountID, id)
 			mu.Lock()
 			defer mu.Unlock()
 			switch {
@@ -101,6 +102,13 @@ func (c *client) listDraftIDs(ctx context.Context, accountID string, limit int) 
 		return ids[:limit], true, nil
 	}
 	return ids, false, nil
+}
+
+// getDraftSummarySafe は getDraftSummary を呼ぶ。取得は ListDrafts の別 goroutine で動くため呼び出し元の recover が効かない。
+// panic はここで記録して、その 1 件の取得失敗にする。
+func (c *client) getDraftSummarySafe(ctx context.Context, accountID, draftID string) (s DraftSummary, err error) {
+	defer logging.RecoverTo(c.logger, "gmail list draft worker", &err)
+	return c.getDraftSummary(ctx, accountID, draftID)
 }
 
 // getDraftSummary は drafts.get format=metadata で 1 件の下書きの一覧用の項目を読む。
