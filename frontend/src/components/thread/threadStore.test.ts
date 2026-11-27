@@ -20,6 +20,7 @@ afterAll(restoreMocks)
 
 const { useThreadStore } = await import('../../stores/thread')
 const { useInboxStore } = await import('../../stores/inbox')
+const { useAccountsStore } = await import('../../stores/accounts')
 const { useUiStore } = await import('../../stores/ui')
 
 beforeEach(() => {
@@ -108,6 +109,31 @@ describe('threadStore', () => {
     await s.reload()
     expect(s.current?.threadId).toBe('t1')
     expect(s.error).toBeUndefined()
+  })
+
+  test('OFFLINE はオフライン表示に、NEEDS_REAUTH は該当アカウントの要再接続に反映し、成功でオンラインへ戻る', async () => {
+    const ui = useUiStore()
+    const s = useThreadStore()
+    await s.open(REF)
+    await until(() => !s.unread) // 自動既読化の成功（オンライン復帰）が済んでから失敗させる
+    ctl.failures.GetThread = appError('OFFLINE')
+    await s.reload()
+    expect(ui.online).toBe(false)
+
+    ctl.failures.GetThread = {
+      cause: JSON.stringify({
+        code: 'NEEDS_REAUTH',
+        message: '再接続が必要です',
+        retryable: false,
+        accountId: 'a1',
+      }),
+    }
+    await s.reload()
+    expect(useAccountsStore().statusOf('a1')).toBe('needs_reauth')
+
+    ctl.failures = {}
+    await s.reload()
+    expect(ui.online).toBe(true)
   })
 
   test('sync:updated は開いているスレッドが変更されたときだけ reload する', async () => {

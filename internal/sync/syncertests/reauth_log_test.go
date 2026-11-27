@@ -32,6 +32,13 @@ func (l *lockedBuf) Write(p []byte) (int, error) {
 	return l.b.Write(p)
 }
 
+// String は書かれた出力の全文を返す。
+func (l *lockedBuf) String() string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.b.String()
+}
+
 // records は書かれた JSON Lines のうち msg が一致するレコードを返す。
 func (l *lockedBuf) records(msg string) []map[string]any {
 	l.mu.Lock()
