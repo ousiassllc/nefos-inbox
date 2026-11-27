@@ -64,8 +64,9 @@ func (e *Events) Updated(id string) [][]string {
 	return out
 }
 
-// Notifier は通知とトレイ未読を記録する。
+// Notifier は通知とトレイ未読を記録する。Err を入れると NewMail は通知を記録したうえでそのエラーを返す（送信失敗の再現用。Scheduler を動かす前に設定する）。
 type Notifier struct {
+	Err     error
 	mu      sync.Mutex
 	notices []notify.NewMailNotice
 	unread  []bool
@@ -75,7 +76,7 @@ func (n *Notifier) NewMail(_ context.Context, x notify.NewMailNotice) error {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	n.notices = append(n.notices, x)
-	return nil
+	return n.Err
 }
 
 func (n *Notifier) SetUnread(v bool) {
