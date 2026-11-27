@@ -58,6 +58,11 @@ jobs:
           GOOS: android
           GOARCH: arm64
         run: golangci-lint run
+      # E2E 用ビルドタグ（e2e。internal/e2e と、それを呼ぶ run.go）側も検査する。.golangci.yml の build-tags は purego だけなので、purego を足して上書きする。
+      - name: Go lint (e2e)
+        env:
+          CGO_ENABLED: "0"
+        run: golangci-lint run --build-tags purego,e2e
       - name: Biome
         run: frontend/node_modules/.bin/biome ci
       - name: Type check
@@ -107,6 +112,15 @@ jobs:
           CGO_ENABLED: "1"
           GOFLAGS: -tags=purego
         run: go test -race ./internal/...
+      # E2E 用ビルドタグ（e2e）の Go コードのコンパイルと単体テスト（エミュレーターは使わない。エミュレーターでの E2E は手動の android-e2e.yml）。
+      - if: matrix.os == 'ubuntu-latest'
+        name: Go vet / test (e2e tag)
+        env:
+          CGO_ENABLED: "0"
+          GOFLAGS: -tags=purego,e2e
+        run: |
+          go vet ./internal/e2e/... .
+          go test ./internal/e2e/...
       - if: matrix.os == 'ubuntu-latest'
         run: bun install --frozen-lockfile
         working-directory: frontend
