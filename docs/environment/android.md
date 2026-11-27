@@ -238,6 +238,7 @@ python3 -B -m unittest discover -s build/android/scripts -p 'gen_icons_test.py' 
 ## 8. CI・リリース（`ci.yml`・`release.yml`）
 
 - `lint` に `Go lint (android)` を追加（`GOOS=android GOARCH=arm64 CGO_ENABLED=0 golangci-lint run`）。`*_android.go`・`!android` 側の型検査と lint が対象になる。手元では `task android:lint`（`build/android/gen` は overlay の生成物で単体では型検査に失敗するため、先に消してから実行し、次の `android:build` が作り直す）。
+- `lint` に `Go lint (windows)` を追加（`GOOS=windows GOARCH=amd64 CGO_ENABLED=0 golangci-lint run`）。主対象の Windows 向け（`//go:build windows`。`motw_windows.go`・`launch_windows.go` など）の `gosec`・`errcheck` 等が対象になる。
 - `lint` に `Go lint (e2e)` を追加（`CGO_ENABLED=0 golangci-lint run --build-tags purego,e2e`。`.golangci.yml` の `build-tags`（`purego`）を上書きするので `purego` も付ける）。`test`（ubuntu）に `Go vet / test (e2e tag)` を追加（`CGO_ENABLED=0`・`GOFLAGS=-tags=purego,e2e` の `go vet ./internal/e2e/... .` と `go test ./internal/e2e/...`）。E2E 用起動モード（ビルドタグ `e2e`）の Go コードとそのテスト（§17.3）が、エミュレーターなしで PR の CI に掛かる。
 - ビルド環境と release APK の作り方は、`.github/actions/` の composite action に切り出して `ci.yml` と `release.yml` で共有する（Windows の `build-installer` と同じ流儀）。
   - `setup-android`: Go・bun・JDK 17・wails3（`WAILS_VERSION`）・SDK platform 36・build-tools・NDK（`sdkmanager`）・フロントの依存。呼び出し元の `env` に `WAILS_VERSION`・`ANDROID_NDK_VERSION`・`ANDROID_BUILD_TOOLS_VERSION` が要る（NDK は `build/android/Taskfile.yml` の `NDK_VERSION` と同じ値）。

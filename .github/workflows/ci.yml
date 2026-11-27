@@ -58,6 +58,13 @@ jobs:
           GOOS: android
           GOARCH: arm64
         run: golangci-lint run
+      # Windows 向け（//go:build windows。motw_windows.go・launch_windows.go など）も検査する。主対象の OS で、syscall・プロセス起動を含む。
+      - name: Go lint (windows)
+        env:
+          CGO_ENABLED: "0"
+          GOOS: windows
+          GOARCH: amd64
+        run: golangci-lint run
       # E2E 用ビルドタグ（e2e。internal/e2e と、それを呼ぶ run.go）側も検査する。.golangci.yml の build-tags は purego だけなので、purego を足して上書きする。
       - name: Go lint (e2e)
         env:
