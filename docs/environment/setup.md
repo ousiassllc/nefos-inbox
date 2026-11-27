@@ -188,7 +188,7 @@ Nefos Inbox 本体は AGPL-3.0（`LICENSE`）。同梱する依存のライセ�
 |------|------|--------------------|
 | プログラム本体・`uninstall.exe`・`NOTICE.txt`・スタートメニュー／デスクトップのショートカット・「アプリと機能」の登録 | インストール先、スタートメニュー、HKCU | 消す |
 | インストール先フォルダ | `InstallLocation` | 空のときだけ消す（利用者が選んだフォルダの他のファイルを再帰削除しない） |
-| 通知用の登録（Wails の通知サービスが起動時に書く） | `HKCU\Software\Classes\AppUserModelId\Nefos Inbox`、その `CustomActivator` の GUID の `HKCU\Software\Classes\CLSID\{GUID}`、`HKCU\Software\Hitomado\NotificationCategories`（と空になった `HKCU\Software\Hitomado`）。旧名（表示名を変える前の版）が書いた `HKCU\Software\Classes\AppUserModelId\Hitomado` と旧名のショートカット（スタートメニューの `Hitomado.lnk`、あればデスクトップの `Hitomado.lnk`）も、アンインストールで新旧どちらの名前でも消す | 消す（次の起動で作り直される） |
+| 通知用の登録（Wails の通知サービスが起動時に書く） | `HKCU\Software\Classes\AppUserModelId\Nefos Inbox`、その `CustomActivator` の GUID の `HKCU\Software\Classes\CLSID\{GUID}`、`HKCU\Software\Nefos Inbox\NotificationCategories`（と空になった `HKCU\Software\Nefos Inbox`）。旧名（表示名を変える前の版）が書いた `HKCU\Software\Classes\AppUserModelId\Hitomado`、`HKCU\Software\Hitomado\NotificationCategories`（と空になった `HKCU\Software\Hitomado`）と旧名のショートカット（スタートメニューの `Hitomado.lnk`、あればデスクトップの `Hitomado.lnk`）も、アンインストールで新旧どちらの名前でも消す | 消す（次の起動で作り直される） |
 | WebView2 のキャッシュ | `%APPDATA%\nefos-inbox.exe`（Wails の既定。アプリは Web ストレージを使わないため、利用者のデータは入らない） | 消す |
 | DB・設定・ログ | `%APPDATA%\Nefos Inbox\` | **残す** |
 | 資格情報（リフレッシュトークン・OAuth クライアントシークレット・AI の API キー） | Windows 資格情報マネージャー（ターゲット名 `Nefos Inbox:nefos-inbox/<種別>/<ID>`。v0.1.46 までは `Hitomado:hitomado/<種別>/<ID>`。アプリが読んだときに新しい名前へ移す） | **残す** |
@@ -412,3 +412,4 @@ pre-push:
 | 1.25 | 2026-11-28 | §4.1 の `lint` に e2e タグ側の Go lint、`test` に e2e タグの Go コードの `go vet`・`go test`（ubuntu）を追記。PR の CI で E2E モードのビルドが壊れたことに気づけるようにした | #465 |
 | 1.26 | 2026-11-28 | §4.1 の `lint` に windows タグ側の Go lint（`Go lint (windows)`）を追記。`//go:build windows` のファイルも `golangci-lint` の対象にした | #466 |
 | 1.27 | 2026-11-28 | §5.2 の Biome の除外に、`frontend/src/assets/provider-logos`（ベンダー提供のロゴ素材）を追記。`biome.json` の `files.includes` に合わせた | #471 |
+| 1.28 | 2026-11-28 | §4.3 のアンインストール表の「通知用の登録」で、今の版が書く `NotificationCategories` のキーを `HKCU\Software\Nefos Inbox` に直し、旧名の `Hitomado` 側は「新旧どちらの名前でも消す」並びに移した。`project.nsi` の Uninstall に合わせた | #476 |
