@@ -279,7 +279,9 @@ CI では確かめられない項目（実アプリが起動中の上書き拒�
 
 ### 5.2 フロントエンド（Biome）
 
-- 設定: `biome.json`。対象は `files.includes` の `frontend/src/**`・`frontend/test/**`・`frontend/*.ts`・`frontend/package.json`・`frontend/tsconfig.json`・`biome.json`。生成物（`frontend/bindings`）は除外する
+- 設定: `biome.json`。対象は `files.includes` の `frontend/src/**`・`frontend/test/**`・`frontend/*.ts`・`frontend/package.json`・`frontend/tsconfig.json`・`biome.json`。次の 2 つは除外する（`files.includes` の `!` で指定）
+  - `frontend/bindings`: 生成物（`wails3 generate bindings` の出力）
+  - `frontend/src/assets/provider-logos`: ベンダー提供のロゴ素材（`NOTICE` と公式ロゴの SVG。ソースコードでも生成物でもなく、Biome の整形で書き換えない。[コンポーネント設計](../components/overview.md) の `ProviderIcon`）
 - 型検査は Biome の範囲外のため、`vue-tsc --noEmit` を CI／pre-push で実行して補う
 - **確認結果**: Biome 2.6.4 は `html.experimentalFullSupportEnabled` で `.vue` の `<script>` と `<template>` を lint する（未使用変数・`==`・`<img>` の alt 欠落を検出できることを確認した）。ESLint の追加は行わない。設定はルートの `biome.json`
 
@@ -409,3 +411,4 @@ pre-push:
 | 1.24 | 2026-11-28 | §4.2 の Release 成果物名を `nefos-inbox-<タグ>-…` に直し、Windows インストーラーの旧名コピー（`Legacy installer name`）を追記。§4.1 の `test` の行に Android ランチャーアイコンの検査を追記 | #460、#462、#467 |
 | 1.25 | 2026-11-28 | §4.1 の `lint` に e2e タグ側の Go lint、`test` に e2e タグの Go コードの `go vet`・`go test`（ubuntu）を追記。PR の CI で E2E モードのビルドが壊れたことに気づけるようにした | #465 |
 | 1.26 | 2026-11-28 | §4.1 の `lint` に windows タグ側の Go lint（`Go lint (windows)`）を追記。`//go:build windows` のファイルも `golangci-lint` の対象にした | #466 |
+| 1.27 | 2026-11-28 | §5.2 の Biome の除外に、`frontend/src/assets/provider-logos`（ベンダー提供のロゴ素材）を追記。`biome.json` の `files.includes` に合わせた | #471 |
