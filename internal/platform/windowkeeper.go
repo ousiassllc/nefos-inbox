@@ -14,14 +14,23 @@ import (
 // saveDelay は移動・リサイズの連続イベントをまとめて 1 回だけ保存するための待ち時間。
 const saveDelay = 500 * time.Millisecond
 
+// keeperWindow は WindowKeeper が使うウィンドウ操作（*application.WebviewWindow が満たす。判定を fake で検査するために切り出す）。
+type keeperWindow interface {
+	Bounds() application.Rect
+	IsMaximised() bool
+	IsMinimised() bool
+	Center()
+	Maximise() application.Window
+}
+
 // WindowKeeper はメインウィンドウの位置・サイズ・最大化を追跡し、変化から少し後と × で隠すとき、終了前に保存する。
 // 起動時は保存値の位置が画面外（モニターの取り外し等）なら中央に戻し、最大化していたなら最大化する。
 type WindowKeeper struct {
-	app   *application.App
-	win   *application.WebviewWindow
-	saved WindowState
-	save  func(WindowState)
-	log   *slog.Logger
+	win     keeperWindow
+	screens func() []Rect // 各モニターの作業領域
+	saved   WindowState
+	save    func(WindowState)
+	log     *slog.Logger
 
 	mu        sync.Mutex
 	normal    Rect // 最大化していないときの直近の矩形
@@ -31,7 +40,7 @@ type WindowKeeper struct {
 
 // newWindowKeeper は win の状態を追跡して save へ渡す。save は保存失敗を自分で記録する。
 func newWindowKeeper(app *application.App, win *application.WebviewWindow, saved WindowState, save func(WindowState), log *slog.Logger) *WindowKeeper {
-	k := &WindowKeeper{app: app, win: win, saved: saved, save: save, log: log, maximized: saved.Maximized}
+	k := &WindowKeeper{win: win, screens: func() []Rect { return workAreas(app) }, saved: saved, save: save, log: log, maximized: saved.Maximized}
 	if r, ok := saved.Bounds(); ok {
 		k.normal = r
 	}
@@ -48,15 +57,21 @@ func newWindowKeeper(app *application.App, win *application.WebviewWindow, saved
 	return k
 }
 
+// workAreas は接続中の各モニターの作業領域を返す。
+func workAreas(app *application.App) []Rect {
+	var areas []Rect
+	for _, s := range app.Screen.GetAll() {
+		areas = append(areas, Rect{X: s.WorkArea.X, Y: s.WorkArea.Y, W: s.WorkArea.Width, H: s.WorkArea.Height})
+	}
+	return areas
+}
+
 // restore は最初に表示された後で、画面外の位置を戻し、最大化を復元する。
 // 最大化は位置とサイズを設定した後に行う（戻したときの大きさを保存値にするため）。
 func (k *WindowKeeper) restore() {
 	defer logging.Recover(k.log, "window restore") // 別 goroutine なので、panic でアプリごと落とさない
 	if r, ok := k.saved.Bounds(); ok {
-		var areas []Rect
-		for _, s := range k.app.Screen.GetAll() {
-			areas = append(areas, Rect{X: s.WorkArea.X, Y: s.WorkArea.Y, W: s.WorkArea.Width, H: s.WorkArea.Height})
-		}
+		areas := k.screens()
 		if len(areas) > 0 && !OnScreen(r, areas) {
 			k.win.Center()
 			k.mu.Lock()
