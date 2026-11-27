@@ -238,10 +238,12 @@ python3 -B -m unittest discover -s build/android/scripts -p 'gen_icons_test.py' 
 ## 8. CI・リリース（`ci.yml`・`release.yml`）
 
 - `lint` に `Go lint (android)` を追加（`GOOS=android GOARCH=arm64 CGO_ENABLED=0 golangci-lint run`）。`*_android.go`・`!android` 側の型検査と lint が対象になる。手元では `task android:lint`（`build/android/gen` は overlay の生成物で単体では型検査に失敗するため、先に消してから実行し、次の `android:build` が作り直す）。
+- `lint` に `Go lint (windows)` を追加（`GOOS=windows GOARCH=amd64 CGO_ENABLED=0 golangci-lint run`）。主対象の Windows 向け（`//go:build windows`。`motw_windows.go`・`launch_windows.go` など）の `gosec`・`errcheck` 等が対象になる。
+- `lint` に `Go lint (e2e)` を追加（`CGO_ENABLED=0 golangci-lint run --build-tags purego,e2e`。`.golangci.yml` の `build-tags`（`purego`）を上書きするので `purego` も付ける）。`test`（ubuntu）に `Go vet / test (e2e tag)` を追加（`CGO_ENABLED=0`・`GOFLAGS=-tags=purego,e2e` の `go vet ./internal/e2e/... .` と `go test ./internal/e2e/...`）。E2E 用起動モード（ビルドタグ `e2e`）の Go コードとそのテスト（§17.3）が、エミュレーターなしで PR の CI に掛かる。
 - ビルド環境と release APK の作り方は、`.github/actions/` の composite action に切り出して `ci.yml` と `release.yml` で共有する（Windows の `build-installer` と同じ流儀）。
   - `setup-android`: Go・bun・JDK 17・wails3（`WAILS_VERSION`）・SDK platform 36・build-tools・NDK（`sdkmanager`）・フロントの依存。呼び出し元の `env` に `WAILS_VERSION`・`ANDROID_NDK_VERSION`・`ANDROID_BUILD_TOOLS_VERSION` が要る（NDK は `build/android/Taskfile.yml` の `NDK_VERSION` と同じ値）。
   - `build-android-apk`（入力 `version`・`output`、署名鍵の入力 `keystore-base64`・`keystore-password`・`key-alias`・`key-password`・`require-fixed-key`）: `.github/scripts/prepare-android-signing.sh` で署名鍵を決める（§4.1。固定鍵の入力が 4 つ揃っていればその鍵、4 つとも空なら **使い捨ての鍵**を `keytool` で作る、`require-fixed-key: "true"` で空なら失敗、一部だけなら失敗。パスワードは `::add-mask::` で伏せ、成果物には含めない）→ 環境変数で渡して `android:package ARCH=arm64 VERSION=…` → `EXPECT_SIGNING=release android:verify` を通した APK を `output` へ置く。
-- `ci.yml` の `android` ジョブ（ubuntu-latest、**pull_request のみ**。`release.yml` が呼ぶとき（push）は動かさず、リリース用の APK は `release.yml` の `android` ジョブが同じ action で作る）: `setup-android` のあと、SecureStore の JVM 単体テスト、デバッグ鍵（フォールバック）の APK の検査、`build-android-apk`（版 `0.99.1`。Secrets は渡さないので使い捨ての鍵。フォークの PR も同じ）、AAB（arm64＋x86_64）の作成と `bundletool validate` を行い、`hitomado-android` のアーティファクトに上げる。
+- `ci.yml` の `android` ジョブ（ubuntu-latest、**pull_request のみ**。`release.yml` が呼ぶとき（push）は動かさず、リリース用の APK は `release.yml` の `android` ジョブが同じ action で作る）: `setup-android` のあと、SecureStore の JVM 単体テスト、デバッグ鍵（フォールバック）の APK の検査、`build-android-apk`（版 `0.99.1`。Secrets は渡さないので使い捨ての鍵。フォークの PR も同じ）、AAB（arm64＋x86_64）の作成と `bundletool validate` を行い、`nefos-inbox-android` のアーティファクトに上げる。
 - `release.yml` の `android` ジョブ（ubuntu-latest。`needs: [version, ci]`）: `setup-android` → `build-android-apk`（版はタグから `v` を除いた値）で `nefos-inbox-vX.Y.Z-android-arm64.apk` を作り、`publish` が Release に添付して `SHA256SUMS.txt` に載せる。**署名は Secrets の固定鍵**（§4.1。`require-fixed-key: "true"`）なので、版が変わっても署名証明書が同じで、前の版の上に上書きインストールで更新できる（固定鍵に切り替えた最初の版だけは、入っている使い捨ての鍵の APK を `adb uninstall jp.ousias.hitomado` で消してから入れる。アプリのデータは消える）。固定鍵の Secrets が無い・一部だけのときは、使い捨ての鍵で公開せずこのジョブが失敗する。Google Play では配布しない。arm64 だけで、AAB・x86_64 は Release に添付しない。この APK のビルドが落ちると `publish` が動かず、Release は作られない。
 - Gradle のキャッシュは明示していない（初回は Gradle 本体の取得を含む）。
 - `android-e2e.yml`（**workflow_dispatch のみ**。`ci.yml` には入れていない）: KVM つきのエミュレーターでの E2E（§17.4）。
@@ -766,7 +768,7 @@ Go のゴルーチンは任意の OS スレッドで動くため、呼び戻し�
 5. **レンダラ落ち**（`E2E_KILL_RENDERER=1`、既定。`adb root` が要るのでエミュレーターの `google_apis`・`userdebug` イメージ向け。root が取れなければこの手順だけ SKIP）: `sandboxed_process` を `kill -9` → アプリのプロセス（pid）が変わらない・`Page loaded`（読み込み直し）のログ・エラー画面が出ていない・スクリーンショットの一覧の領域が描かれている（`ui.py inked`。作り直した WebView の a11y ツリーが更新されない場合があり、画素でも確かめる。a11y に一覧が出るかも見るが必須にはしない）・`WailsActivity` のログに復旧が出る。
 6. `crash` バッファにアプリのクラッシュが無い・`Render process crash wasn't handled` が無い・最後までプロセスが動いている。
 
-待ちが切れたときは、最後の画面（スクリーンショット・ダンプ・`text`／`content-desc` の一覧）を残す。システムアプリの「応答なし」ダイアログ（Pixel Launcher）が出たら「待つ」を選ぶ。画面のスクリーンショット・ダンプ・logcat は `E2E_OUT`（既定 `/tmp/hitomado-e2e-out`）に残る。
+待ちが切れたときは、最後の画面（スクリーンショット・ダンプ・`text`／`content-desc` の一覧）を残す。システムアプリの「応答なし」ダイアログ（Pixel Launcher）が出たら「待つ」を選ぶ。画面のスクリーンショット・ダンプ・logcat は `E2E_OUT`（既定 `/tmp/nefos-inbox-e2e-out`）に残る。
 
 **回し方**:
 
