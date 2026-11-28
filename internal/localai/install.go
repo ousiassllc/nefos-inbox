@@ -18,7 +18,10 @@ func (m *Manager) StartInstall() error {
 		return nil
 	}
 	p := m.cfg.pin
-	if err := m.cfg.checkSpace(m.cfg.downloadsDir(), p.Size+p.ExtractedSize+spaceMargin); err != nil {
+	// 前回の途中までの .part は、ダウンロードの始めに作り直す（上書きする）ので、そのぶんは新しく要らない。
+	part := m.cfg.zipPath() + ".part"
+	held := partialBytes(filepath.Dir(part), func(name string) bool { return name == filepath.Base(part) })
+	if err := m.cfg.checkSpace(m.cfg.downloadsDir(), p.Size+p.ExtractedSize+spaceMargin, min(held, p.Size)); err != nil {
 		return err
 	}
 	ctx, err := m.beginJob(JobInstall, "", StageDownload, p.Size)

@@ -80,8 +80,8 @@ onMounted(() => {
     </div>
 
     <template v-if="mode === 'managed'">
-      <p class="note" data-testid="local-ai-note">{{ t.noKeyNote }}</p>
-      <AILocalManagedSection />
+      <p v-if="local.status?.supported" class="note" data-testid="local-ai-note">{{ t.noKeyNote }}</p>
+      <AILocalManagedSection @connect-external="choose('external')" />
     </template>
     <template v-else>
       <p v-if="savedMode !== 'external'" class="note" data-testid="local-ai-external-save-note">{{ t.externalSaveNote }}</p>

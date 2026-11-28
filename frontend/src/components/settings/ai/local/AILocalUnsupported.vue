@@ -5,8 +5,10 @@ import { useUiStore } from '../../../../stores/ui'
 import BaseButton from '../../../ui/BaseButton.vue'
 
 // このPCでは、アプリが用意するローカルAIを使えない（Windows 以外・ARM64・古い Windows・メモリ不足。#458）。
-// 理由（Go が日本語 1 文で返す）と、クラウドの AI（ChatGPT プラン・Anthropic・OpenAI 互換）の案内、つなぎ先の一覧へ戻る導線を出す。導入のボタンは出さない。
+// 理由（Go が日本語 1 文で返す）と、「すでに動いているサーバーにつなぐ」（external）への案内、クラウドの AI（ChatGPT プラン・Anthropic・OpenAI 互換）の案内、
+// つなぎ先の一覧へ戻る導線を出す。導入のボタンは出さない（API キー不要の注記も出さない。AILocalPage が隠す）。
 defineProps<{ reason?: string }>()
+const emit = defineEmits<{ 'connect-external': [] }>()
 const ui = useUiStore()
 const t = msg.ai.local
 </script>
@@ -15,8 +17,12 @@ const t = msg.ai.local
   <div class="unsupported" data-testid="local-ai-unsupported">
     <h4 class="sub">{{ t.unsupportedHeading }}</h4>
     <p v-if="reason" class="reason" data-testid="local-ai-unsupported-reason">{{ reason }}</p>
+    <p class="cloud" data-testid="local-ai-unsupported-external">{{ t.unsupportedExternal }}</p>
     <p class="cloud">{{ t.unsupportedCloud }}</p>
     <div class="actions">
+      <BaseButton variant="primary" size="sm" data-testid="local-ai-connect-external" @click="emit('connect-external')">
+        {{ t.unsupportedConnect }}
+      </BaseButton>
       <BaseButton variant="secondary" size="sm" data-testid="local-ai-back-to-list" @click="ui.aiProviderPage = undefined">
         <ArrowLeft class="icon icon-sm" aria-hidden="true" />{{ t.unsupportedBack }}
       </BaseButton>

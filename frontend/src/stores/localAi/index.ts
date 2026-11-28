@@ -29,6 +29,8 @@ export const useLocalAiStore = defineStore('localAi', () => {
   const status = ref<LocalAIStatus>()
   /** 直前の操作・状態の取得の失敗（日本語。`role="alert"` で出す）。 */
   const error = ref<string>()
+  /** 直前の `error` が、モデルの取得を始められなかった空き容量不足か（画面が見出しと案内を変える）。 */
+  const noSpacePull = ref(false)
   /** 操作（導入・取得・中止・停止・削除）を呼び出している間。 */
   const busy = ref(false)
   /** 状態を反映するたびに増える。取得・操作の結果より先に新しいイベントが届いたとき、古い結果で上書きしないための印。 */
@@ -69,6 +71,7 @@ export const useLocalAiStore = defineStore('localAi', () => {
    */
   function start(): () => void {
     error.value = undefined
+    noSpacePull.value = false
     if (subscribers++ === 0) off = onEvent<LocalAIStatus>(EVENTS.LOCAL_AI_STATUS, apply)
     void refresh()
     let released = false
@@ -83,23 +86,26 @@ export const useLocalAiStore = defineStore('localAi', () => {
   }
 
   /** 操作を 1 つ呼び、返った状態を反映する。失敗は `error` に入れる（投げない）。 */
-  async function run(op: () => PromiseLike<LocalAIStatus>): Promise<void> {
+  async function run(op: () => PromiseLike<LocalAIStatus>, pulling = false): Promise<void> {
     if (busy.value) return
     error.value = undefined
+    noSpacePull.value = false
     busy.value = true
     const rev = revision
     try {
       const s = await call(op())
       if (rev === revision) apply(s) // 呼び出しの間に新しいイベントが届いていれば、そちらが新しい
     } catch (e) {
-      error.value = parseBindingError(e).message
+      const err = parseBindingError(e)
+      error.value = err.message
+      noSpacePull.value = pulling && err.details?.reason === 'no_space'
     } finally {
       busy.value = false
     }
   }
 
   const install = () => run(() => LocalAIService.InstallLocalAI())
-  const pull = (name: string) => run(() => LocalAIService.PullLocalAIModel(name))
+  const pull = (name: string) => run(() => LocalAIService.PullLocalAIModel(name), true)
   const cancel = () => run(() => LocalAIService.CancelLocalAIJob())
   const stop = () => run(() => LocalAIService.StopLocalAI())
   const deleteModel = (name: string) => run(() => LocalAIService.DeleteLocalAIModel(name))
@@ -128,6 +134,7 @@ export const useLocalAiStore = defineStore('localAi', () => {
   return {
     status,
     error,
+    noSpacePull,
     busy,
     job,
     models,

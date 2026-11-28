@@ -57,6 +57,12 @@ describe('ローカルAI（managed）の状態ごとの表示（#458）', () => 
       'ARM64 の Windows には対応していません。',
     )
     expect(tid(w, 'local-ai-unsupported').text()).toContain(
+      'この PC では、アプリが用意する Ollama を使えません',
+    )
+    // API キー不要の注記は出さず、「すでに動いているサーバーにつなぐ」へ案内する（押すと external の入力欄へ）。
+    expect(w.find('[data-testid="local-ai-note"]').exists()).toBe(false)
+    expect(tid(w, 'local-ai-connect-external').text()).toBe('すでに動いているサーバーにつなぐ')
+    expect(tid(w, 'local-ai-unsupported').text()).toContain(
       'ChatGPT プラン・Anthropic・OpenAI 互換',
     )
     expect(tid(w, 'local-ai-install').exists()).toBe(false)
@@ -64,12 +70,17 @@ describe('ローカルAI（managed）の状態ごとの表示（#458）', () => 
     ui.aiProviderPage = 'local'
     await tid(w, 'local-ai-back-to-list').trigger('click')
     expect(ui.aiProviderPage).toBeUndefined()
+    await tid(w, 'local-ai-connect-external').trigger('click')
+    await flushPromises()
+    expect(tid(w, 'local-ai-external').exists()).toBe(true)
+    expect(tid(w, 'local-ai-unsupported').exists()).toBe(false)
   })
 
   test('未導入: 版・ダウンロード量・「Ollama を導入」。押すと InstallLocalAI を呼ぶ', async () => {
     const w = await open()
     const box = tid(w, 'local-ai-not-installed')
-    expect(box.text()).toContain('v0.40.17')
+    expect(box.text()).toContain('バージョン 0.40.17')
+    expect(box.text()).not.toContain('v0.40.17')
     expect(box.text()).toContain('約 1.6 GB')
     expect(w.get('[data-testid="local-ai-note"]').text()).toBe(
       'API キーは要りません。メールの内容はこの PC の外へ送られません。',
@@ -202,7 +213,11 @@ describe('ローカルAI（managed）の状態ごとの表示（#458）', () => 
       .trigger('click')
     await flushPromises()
     const alert = w.get('[role="alert"]')
+    expect(alert.text()).toContain('モデルを取得できませんでした')
     expect(alert.text()).toContain(msg)
+    expect(alert.text()).toContain(
+      'ディスクの空きを増やすか、小さいモデル（Gemma 4 E2B など）を選んでください。',
+    )
   })
 
   test('状態は開いたとき取得し、localai:status のイベントで更新する。閉じたら購読を解除する', async () => {

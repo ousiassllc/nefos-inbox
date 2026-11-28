@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"path/filepath"
 	"strings"
 )
 
@@ -16,7 +17,7 @@ const maxPullLine = 1 << 20
 
 // StartPull はカタログのモデル name の取得を始めて、すぐ戻る（進捗は OnChange・Status の Job）。
 // カタログ外は ErrUnknownModel、Ollama が未導入なら ErrNotInstalled、ほかのジョブ中は ErrBusy、
-// 空き容量（models のボリュームに SizeBytes + 1 GiB）が足りなければ *NoSpaceError。
+// 空き容量（models のボリュームに、取得済みの途中の層を除いた SizeBytes + 1 GiB）が足りなければ *NoSpaceError。
 // 取得の間は Acquire を持ち続ける（途中で止めない）。中止すると Ollama が途中の層を残すので、取り直すと続きから進む。
 func (m *Manager) StartPull(name string) error {
 	cm, err := m.catalogModel(name)
@@ -29,7 +30,12 @@ func (m *Manager) StartPull(name string) error {
 	if !m.installed() {
 		return ErrNotInstalled
 	}
-	if err := m.cfg.checkSpace(m.cfg.modelsDir(), cm.SizeBytes+spaceMargin); err != nil {
+	// 前回の途中までの層（models/blobs/sha256-*-partial）は、取り直すと続きから進むので、そのぶんは新しく要らない。
+	// 別のモデルの途中のものも数えるので、足りるかどうかの見積もりは少し甘くなり得る（足りなければ Ollama がジョブの失敗で知らせる）。
+	held := partialBytes(filepath.Join(m.cfg.modelsDir(), "blobs"), func(name string) bool {
+		return strings.HasPrefix(name, "sha256-") && strings.HasSuffix(name, "-partial")
+	})
+	if err := m.cfg.checkSpace(m.cfg.modelsDir(), cm.SizeBytes+spaceMargin, min(held, cm.SizeBytes)); err != nil {
 		return err
 	}
 	ctx, err := m.beginJob(JobPull, name, StageStart, cm.SizeBytes)

@@ -201,15 +201,35 @@ func (r resolved) freeBytes(path string) (int64, error) {
 }
 
 // checkSpace は path のボリュームに need が空いているか。足りなければ *NoSpaceError。
-func (r resolved) checkSpace(path string, need int64) error {
+// held は、これからのジョブが使い回す・上書きする途中までのファイルの大きさで、すでにディスクを使っているので必要量から引く（need を超えない）。
+func (r resolved) checkSpace(path string, need, held int64) error {
 	free, err := r.freeBytes(path)
 	if err != nil {
 		return failure("空き容量を確認できませんでした。", err)
 	}
+	need -= min(max(held, 0), need)
 	if free < need {
 		return &NoSpaceError{Required: need, Free: free}
 	}
 	return nil
+}
+
+// partialBytes は dir の直下の、match に合う通常ファイルの大きさの合計（途中までのダウンロード）。読めなければ 0（引かないだけで、安全側）。
+func partialBytes(dir string, match func(name string) bool) int64 {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return 0
+	}
+	var sum int64
+	for _, e := range entries {
+		if !e.Type().IsRegular() || !match(e.Name()) {
+			continue
+		}
+		if fi, err := e.Info(); err == nil {
+			sum += fi.Size()
+		}
+	}
+	return sum
 }
 
 // Launcher は ollama のプロセスを起動する。

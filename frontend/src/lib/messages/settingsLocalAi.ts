@@ -1,5 +1,8 @@
 // 設定画面の AI の「ローカルAI（Ollama）」の文言（settings.ai.local として settingsAi.ts から参照する。#458。Windows のみ）。
 // 画面は「AI のつなぎ先」の一覧の行と、そこから開くページ（つなぎ方のラジオ・managed・external）。
+/** 版の表記（先頭の v を外す。例 v0.40.17 → 0.40.17）。画面では「バージョン 0.40.17」と書く。 */
+const bareVersion = (v: string) => v.replace(/^v/i, '')
+
 export const settingsLocalAi = {
   name: 'ローカルAI（Ollama）',
   rowNote: 'この PC で動かす',
@@ -13,7 +16,10 @@ export const settingsLocalAi = {
     'ローカルAI（Ollama）をまだ導入していません。「AI のつなぎ先」で導入してください。',
   waitNote: 'ローカルAIは数分かかることがあります。',
   // 使えない PC。理由は Go が日本語 1 文で返す（unsupportedReason）。
-  unsupportedHeading: 'この PC ではローカルAIを使えません',
+  unsupportedHeading: 'この PC では、アプリが用意する Ollama を使えません',
+  unsupportedExternal:
+    'すでに Ollama や LM Studio などが動いているなら、そのサーバーにつないで使えます。',
+  unsupportedConnect: 'すでに動いているサーバーにつなぐ',
   unsupportedCloud:
     '代わりに、クラウドの AI（ChatGPT プラン・Anthropic・OpenAI 互換）をつないで使えます。',
   unsupportedBack: '「AI のつなぎ先」の一覧へ戻る',
@@ -23,7 +29,7 @@ export const settingsLocalAi = {
   // 未導入・導入中
   notInstalledHeading: 'Ollama をまだ導入していません',
   notInstalledDetail: (version: string, size: string) =>
-    `Ollama ${version} をダウンロードして、このアプリの中に導入します（ダウンロード約 ${size}）。導入したあと、使うモデルを取得します。`,
+    `Ollama（バージョン ${bareVersion(version)}）をダウンロードして、このアプリの中に導入します（ダウンロード約 ${size}）。導入したあと、使うモデルを取得します。`,
   install: 'Ollama を導入',
   cancel: '中止',
   stages: {
@@ -38,7 +44,7 @@ export const settingsLocalAi = {
   progressBytes: (done: string, total: string) => `${done} / ${total}`,
   // 導入済み
   installedHeading: 'Ollama',
-  version: (v: string) => `版 ${v}`,
+  version: (v: string) => `バージョン ${bareVersion(v)}`,
   running: '起動中',
   stopped: '停止中',
   stop: '停止',
@@ -64,6 +70,9 @@ export const settingsLocalAi = {
     'Ollama と、取得したモデルをすべてこの PC から削除します。使うときは、導入からやり直してください。',
   removeConfirm: '削除する',
   failedHeading: '直前の操作に失敗しました',
+  // モデルの取得が空き容量不足で始められなかったとき（理由の文面は Go が返す）。
+  pullFailedHeading: 'モデルを取得できませんでした',
+  noSpacePullHint: 'ディスクの空きを増やすか、小さいモデル（Gemma 4 E2B など）を選んでください。',
   // external
   externalIntro:
     'すでに動いている Ollama や LM Studio などのサーバーにつなぎます。Base URL を保存すると使えるようになります。',

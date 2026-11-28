@@ -10,8 +10,9 @@ import AILocalUnsupported from './AILocalUnsupported.vue'
 import LocalAIProgress from './LocalAIProgress.vue'
 
 // 「このアプリが用意する Ollama」（managed。#458）。状態は LocalAIStatus（開いたとき取得し、`localai:status` で更新する。閉じたら購読を解除）。
-//   使えない PC → 理由とクラウドの案内 ／ 未導入 → 版・ダウンロード量・「Ollama を導入」 ／ 導入中 → 段階＋進捗＋「中止」 ／ 導入済み → AILocalInstalled。
+//   使えない PC → 理由と「すでに動いているサーバーにつなぐ」・クラウドの案内 ／ 未導入 → 版・ダウンロード量・「Ollama を導入」 ／ 導入中 → 段階＋進捗＋「中止」 ／ 導入済み → AILocalInstalled。
 // 失敗（直前のジョブの lastError・操作の失敗・空き不足）は role="alert" で出す。つなぎ先の「接続済み」の取り直しは、ストアが状態の変化で行う（設定ダイアログが開いている間は購読を保つ）。
+const emit = defineEmits<{ 'connect-external': [] }>()
 const store = useLocalAiStore()
 const t = msg.ai.local
 
@@ -31,8 +32,9 @@ onBeforeUnmount(stop)
     <p v-if="alerts.length > 0" class="alert" role="alert" data-testid="local-ai-alert">
       <WarningCircle class="icon alert-icon" aria-hidden="true" />
       <span class="alert-text">
-        <strong>{{ t.failedHeading }}</strong>
+        <strong>{{ store.noSpacePull ? t.pullFailedHeading : t.failedHeading }}</strong>
         <template v-for="m in alerts" :key="m"><br />{{ m }}</template>
+        <template v-if="store.noSpacePull"><br />{{ t.noSpacePullHint }}</template>
       </span>
     </p>
     <div v-if="!status">
@@ -41,7 +43,11 @@ onBeforeUnmount(stop)
         <BaseButton variant="secondary" data-testid="local-ai-reload" @click="store.refresh()">{{ t.reload }}</BaseButton>
       </div>
     </div>
-    <AILocalUnsupported v-else-if="!status.supported" :reason="status.unsupportedReason" />
+    <AILocalUnsupported
+      v-else-if="!status.supported"
+      :reason="status.unsupportedReason"
+      @connect-external="emit('connect-external')"
+    />
     <div v-else-if="installing" class="install" data-testid="local-ai-installing">
       <LocalAIProgress :job="installing" />
       <div class="actions">

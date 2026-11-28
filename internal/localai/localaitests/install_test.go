@@ -230,6 +230,37 @@ func TestInstallNoSpace(t *testing.T) {
 	}
 }
 
+// 前回の途中までの .part は、ダウンロードの始めに作り直す（上書きする）ので、空き容量の見積もりから引く。
+func TestInstallNoSpaceCountsPartialDownload(t *testing.T) {
+	body := goodZip(t)
+	u, hc := serveTLS(t, serveBody(body))
+	pin := pinFor(body, u)
+	dir := filepath.Join(t.TempDir(), "ollama")
+	downloads := filepath.Join(dir, "downloads")
+	if err := os.MkdirAll(downloads, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	const partial = 100
+	if err := os.WriteFile(filepath.Join(downloads, "ollama-windows-amd64.zip.part"), make([]byte, partial), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	need := pin.Size + pin.ExtractedSize + 1<<30 - partial // .part を数えた必要量
+	newMgr := func(free int64) *localai.Manager {
+		m, _ := newManager(t, localai.Options{Dir: dir, HTTPClient: hc, Pin: pin, FreeSpace: func(string) (int64, error) { return free, nil }})
+		return m
+	}
+
+	var ns *localai.NoSpaceError
+	if err := newMgr(need - 1).StartInstall(); !errors.As(err, &ns) || ns.Required != need {
+		t.Fatalf("err = %v (%+v), want *NoSpaceError{Required: %d}", err, ns, need)
+	}
+	m := newMgr(need)
+	if err := m.StartInstall(); err != nil {
+		t.Fatalf("部分ダウンロードを数えれば足りるのに断られました: %v", err)
+	}
+	waitJobEnd(t, m)
+}
+
 func TestInstallUnsupported(t *testing.T) {
 	m, _ := newManager(t, localai.Options{Support: func() (bool, string) { return false, "テスト用の理由です。" }})
 	if err := m.StartInstall(); !errors.Is(err, localai.ErrUnsupported) {

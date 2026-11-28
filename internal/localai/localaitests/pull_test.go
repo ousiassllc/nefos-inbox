@@ -269,6 +269,41 @@ func TestPullCancel(t *testing.T) {
 	}
 }
 
+// 前回の途中までの層（Ollama の blobs/sha256-*-partial）は、取り直すと続きから進むので、空き容量の見積もりから引く。
+func TestStartPullNoSpaceCountsPartialBlobs(t *testing.T) {
+	const size, partial = int64(5 << 30), int64(3 << 20)
+	need := size + 1<<30 - partial // 途中の層を数えた必要量
+	check := func(free int64) (*localai.Manager, string, error) {
+		m, _, _, dir := pullManager(t, newPullServer(nil, ""), size, localai.Options{FreeSpace: func(string) (int64, error) { return free, nil }})
+		blobs := filepath.Join(dir, "models", "blobs")
+		if err := os.MkdirAll(blobs, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		files := map[string]int64{
+			"sha256-aaaa-partial":   partial, // 数える
+			"sha256-bbbb":           1 << 20, // 取得済みの層は数えない
+			"sha256-cccc-partial-0": 1 << 20, // 層ごとの記録（-partial で終わらない）は数えない
+		}
+		for name, n := range files {
+			if err := os.WriteFile(filepath.Join(blobs, name), make([]byte, n), 0o600); err != nil {
+				t.Fatal(err)
+			}
+		}
+		return m, dir, m.StartPull(testModel)
+	}
+
+	var ns *localai.NoSpaceError
+	if _, _, err := check(need - 1); !errors.As(err, &ns) || ns.Required != need || ns.Free != need-1 {
+		t.Fatalf("err = %v (%+v), want *NoSpaceError{Required: %d}", err, ns, need)
+	}
+	m, _, err := check(need)
+	if err != nil {
+		t.Fatalf("途中の層を数えれば足りるのに断られました: %v", err)
+	}
+	m.CancelJob()
+	waitJobEnd(t, m)
+}
+
 func TestStartPullPreconditions(t *testing.T) {
 	srv := newPullServer(nil, "")
 	m, f, _, _ := pullManager(t, srv, 5<<30, localai.Options{FreeSpace: func(string) (int64, error) { return 1 << 30, nil }})

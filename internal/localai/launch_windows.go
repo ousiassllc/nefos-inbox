@@ -3,6 +3,7 @@
 package localai
 
 import (
+	"errors"
 	"os/exec"
 	"sync"
 	"syscall"
@@ -18,7 +19,8 @@ type winProcess struct {
 	job windows.Handle // 閉じたら 0
 }
 
-// launchProcess は コンソールを出さずに ollama を起動し、Job Object に入れる。標準入出力は捨てる（NUL）。
+// launchProcess は コンソールを出さずに ollama を、サスペンド（CREATE_SUSPENDED）で起動し、Job Object に入れてから再開する。
+// 入れる前に動き出すと、その間に作った子が Job の外に出てしまうため。標準入出力は捨てる（NUL）。
 func launchProcess(spec LaunchSpec) (Process, error) {
 	job, err := newKillOnCloseJob()
 	if err != nil {
@@ -27,12 +29,19 @@ func launchProcess(spec LaunchSpec) (Process, error) {
 	cmd := exec.Command(spec.Path, spec.Args...) //nolint:gosec // 固定の実行ファイルと固定の引数（serve）だけ
 	cmd.Env = spec.Env
 	cmd.Dir = spec.Dir
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: windows.CREATE_NO_WINDOW}
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: windows.CREATE_NO_WINDOW | windows.CREATE_SUSPENDED}
 	if err := cmd.Start(); err != nil {
 		_ = windows.CloseHandle(job)
 		return nil, err
 	}
-	if err := assignToJob(job, uint32(cmd.Process.Pid)); err != nil { //nolint:gosec // pid は正の小さな値
+	pid := uint32(cmd.Process.Pid) //nolint:gosec // pid は正の小さな値
+	if err := assignToJob(job, pid); err != nil {
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait()
+		_ = windows.CloseHandle(job)
+		return nil, err
+	}
+	if err := resumeMainThread(pid); err != nil {
 		_ = cmd.Process.Kill()
 		_ = cmd.Wait()
 		_ = windows.CloseHandle(job)
@@ -63,6 +72,30 @@ func assignToJob(job windows.Handle, pid uint32) error {
 	}
 	defer func() { _ = windows.CloseHandle(h) }()
 	return windows.AssignProcessToJobObject(job, h)
+}
+
+// resumeMainThread はサスペンドで作ったプロセスの唯一のスレッド（メインスレッド）を再開する。
+// os/exec はスレッドのハンドルを返さないので、スレッドの一覧から pid の持ち主のものを探す（再開前は、そのプロセスのスレッドは 1 つだけ）。
+func resumeMainThread(pid uint32) error {
+	snap, err := windows.CreateToolhelp32Snapshot(windows.TH32CS_SNAPTHREAD, 0)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = windows.CloseHandle(snap) }()
+	entry := windows.ThreadEntry32{Size: uint32(unsafe.Sizeof(windows.ThreadEntry32{}))} //nolint:gosec // 構造体の大きさは小さい
+	for err = windows.Thread32First(snap, &entry); err == nil; err = windows.Thread32Next(snap, &entry) {
+		if entry.OwnerProcessID != pid {
+			continue
+		}
+		th, oerr := windows.OpenThread(windows.THREAD_SUSPEND_RESUME, false, entry.ThreadID)
+		if oerr != nil {
+			return oerr
+		}
+		_, rerr := windows.ResumeThread(th)
+		_ = windows.CloseHandle(th)
+		return rerr
+	}
+	return errors.New("起動したプロセスのスレッドが見つかりません")
 }
 
 // Wait は終了まで待ち、Job を閉じる（残った子孫があれば KILL_ON_JOB_CLOSE で止まる）。
