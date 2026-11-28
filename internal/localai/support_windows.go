@@ -40,10 +40,10 @@ func checkSupport() (bool, string) {
 		return false, "ARM 版の Windows（Snapdragon などを使った PC）では、アプリが用意する Ollama を動かせません。"
 	}
 	if windows.RtlGetVersion().BuildNumber < minBuild {
-		return false, "Windows 10 22H2（ビルド 19045）より古い Windows ではローカルAIを使えません。"
+		return false, "Windows 10 22H2（ビルド 19045）より古い Windows では、アプリが用意する Ollama を動かせません。"
 	}
 	if total, ok := totalPhysicalMemory(); ok && total < minPhysicalRAM {
-		return false, "メモリ（RAM）が 8 GB 未満の PC ではローカルAIを使えません。"
+		return false, "メモリ（RAM）が 8 GB 未満の PC では、アプリが用意する Ollama を動かせません。"
 	}
 	return true, ""
 }

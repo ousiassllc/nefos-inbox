@@ -80,7 +80,7 @@ type Model struct {
 
 // エラー。メッセージは画面に出してよい日本語（パス・URL を含めない）。
 var (
-	ErrUnsupported  = errors.New("このPCではローカルAIを使えません。")
+	ErrUnsupported  = errors.New("この PC では、アプリが用意する Ollama を動かせません。")
 	ErrNotInstalled = errors.New("ローカルAI（Ollama）がまだ導入されていません。")
 	ErrUnknownModel = errors.New("取得できないモデルです。")
 	ErrBusy         = errors.New("ほかの導入・取得が終わるまでお待ちください。")
