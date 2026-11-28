@@ -37,7 +37,7 @@ var procGlobalMemoryStatusEx = windows.NewLazySystemDLL("kernel32.dll").NewProc(
 // checkSupport は ARM64 の Windows（x64 エミュレーションで動いていても）・Windows 10 22H2 より古い・物理メモリ不足を断る。
 func checkSupport() (bool, string) {
 	if nativeARM64() {
-		return false, "ARM 版の Windows（Snapdragon などを使った PC）ではローカルAIを使えません。"
+		return false, "ARM 版の Windows（Snapdragon などを使った PC）では、アプリが用意する Ollama を動かせません。"
 	}
 	if windows.RtlGetVersion().BuildNumber < minBuild {
 		return false, "Windows 10 22H2（ビルド 19045）より古い Windows ではローカルAIを使えません。"
