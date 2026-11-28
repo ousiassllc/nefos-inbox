@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/ousiassllc/nefos-inbox/internal/ai"
+	"github.com/ousiassllc/nefos-inbox/internal/app/aicore/aiinput"
 	"github.com/ousiassllc/nefos-inbox/internal/app/apperr"
 	"github.com/ousiassllc/nefos-inbox/internal/app/dto"
 	"github.com/ousiassllc/nefos-inbox/internal/gmail"
@@ -20,34 +21,10 @@ const (
 	inboxZeroMaxRefs = 100
 	// inboxZeroConcurrency は AI への同時リクエスト数の上限。
 	inboxZeroConcurrency = 4
-	// inboxZeroBodyRunes は AI へ送る本文の長さ（先頭からの文字数）。
-	inboxZeroBodyRunes = 500
 	// inboxZeroThreshold は候補にする確率の下限。選ばれた選択肢の確率（probabilities[choice]）に当てる。
 	// Jev は確率を返し、チャット系のモデルは自己申告の確信度（0〜1）を返す。どちらも同じ下限で、確信が足りなければ候補にしない。
 	inboxZeroThreshold = 0.8
 )
-
-// Gmail のシステムラベル。
-const (
-	labelSent   = "SENT"
-	labelUnread = "UNREAD"
-)
-
-// classifyCriteria は判定の AI へ渡す選択肢（この順。Jev でもチャット系のモデルでも同じ）。無効にした理由も含めて常に全部を渡す
-// （無効な理由のメールを「その他」へ寄せず、その理由として選ばせたうえで候補から外すため）。
-// カレンダーの招待・通知も AI が判定する（端末内の MIME・送信元の判定はしない。#377）。通知と重ならないよう、通知の説明でカレンダーを除く。
-var classifyCriteria = []ai.Criterion{
-	{Name: dto.InboxZeroReasonAd, Description: "商品・サービス・イベントなどを宣伝・販売促進する広告のメール（セール、キャンペーン、クーポン、新商品の案内など）。"},
-	{Name: dto.InboxZeroReasonCalendar, Description: "Google カレンダー・Outlook などの予定の招待・変更・取り消し・返信・リマインダー・予定表のまとめの通知。"},
-	{Name: dto.InboxZeroReasonNotification, Description: "サービスやシステムが自動で送る通知だけのメール（ログイン通知、配送状況、利用明細、SNS の更新通知など）で、返信も対応も求めないもの。カレンダーの招待・通知は除く。"},
-	{Name: dto.InboxZeroReasonNewsletter, Description: "定期的に配信されるニュースレター・メールマガジン・記事やブログの更新まとめ。"},
-	{Name: choiceOther, Description: "通常のメール・個人宛て・重要なもの・判断できない。"},
-}
-
-// choiceOther は「どれにも当てはまらない」選択肢の名前。候補にならない。
-const choiceOther = "other"
-
-const classifyInstructions = "このメールの種類として、最も当てはまるものを 1 つ選んでください。"
 
 // inboxZeroRun は FindInboxZeroCandidates 1 回分の実行の状態。
 type inboxZeroRun struct {
@@ -58,6 +35,9 @@ type inboxZeroRun struct {
 	// classifier は aiReasons が真のときだけ作る。provider はその AI（エラーの文面の分類に使う）。
 	classifier ai.Classifier
 	provider   string
+	// sel・key はローカルAIのとき、1 件ごとに Classifier を作る（managed は呼び出しごとに Ollama の送信先を得る）ために持つ。
+	sel SelectedAI
+	key string
 	// emails はアカウント ID → そのアカウントのメールアドレス（replied がオンのときだけ）。
 	emails map[string]string
 
@@ -132,11 +112,15 @@ func (r *inboxZeroRun) setupClassifier(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	r.sel, r.key, r.provider = sel, key, sel.Provider
+	if sel.Provider == providerLocal {
+		return nil
+	}
 	cl, err := r.s.d.Classifier(sel.Provider, sel.Model, sel.BaseURL, key)
 	if err != nil {
 		return initError(err)
 	}
-	r.classifier, r.provider = cl, sel.Provider
+	r.classifier = cl
 	return nil
 }
 
@@ -163,7 +147,7 @@ func (r *inboxZeroRun) execute(runCtx context.Context, refs []dto.ThreadRef) (dt
 	r.abort = abort
 
 	slots := make([]slot, len(refs))
-	sem := make(chan struct{}, inboxZeroConcurrency)
+	sem := make(chan struct{}, r.concurrency())
 	var wg sync.WaitGroup
 	for i, ref := range refs {
 		sem <- struct{}{}
@@ -236,13 +220,13 @@ func (r *inboxZeroRun) judge(ctx context.Context, ref dto.ThreadRef) slot {
 		}
 		return slot{}
 	}
-	msgs := nonDraftMessages(thread)
+	msgs := aiinput.NonDraftMessages(thread)
 	if len(msgs) == 0 {
 		return slot{}
 	}
 	latest := msgs[len(msgs)-1]
-	cand := dto.InboxZeroCandidate{Ref: ref, From: senderLabel(latest), Subject: latest.Subject}
-	if r.reasons.Replied && isOwnMessage(latest, r.emails[ref.AccountID]) {
+	cand := dto.InboxZeroCandidate{Ref: ref, From: aiinput.SenderLabel(latest), Subject: latest.Subject}
+	if r.reasons.Replied && aiinput.IsOwnMessage(latest, r.emails[ref.AccountID]) {
 		cand.Reason = dto.InboxZeroReasonReplied
 		return slot{cand: &cand}
 	}
@@ -261,16 +245,6 @@ func (r *inboxZeroRun) judge(ctx context.Context, ref dto.ThreadRef) slot {
 	return slot{cand: &cand}
 }
 
-// classifyFailure は AI の失敗を扱う。認証（401／403）・レート制限（429）・ChatGPT の利用上限・対象外は、
-// どのスレッドでも同じ結果になるので全体を止め、それ以外は該当スレッドだけ skipped にする。
-func (r *inboxZeroRun) classifyFailure(err error) slot {
-	if errors.Is(err, ai.ErrUnauthorized) || errors.Is(err, ai.ErrRateLimited) || errors.Is(err, ai.ErrUsageLimit) || errors.Is(err, ai.ErrNotEligible) {
-		r.fail(r.s.mapProviderError(r.provider, "", err))
-		return slot{}
-	}
-	return slot{skipped: true}
-}
-
 // aiEligible は AI の判定で候補にできる理由（オンのもの。ニュースレターはスレッドが未読のときだけ）。
 func (r *inboxZeroRun) aiEligible(msgs []gmail.MessageFull) []string {
 	if !r.aiReasons {
@@ -286,7 +260,7 @@ func (r *inboxZeroRun) aiEligible(msgs []gmail.MessageFull) []string {
 	if r.reasons.Notification {
 		reasons = append(reasons, dto.InboxZeroReasonNotification)
 	}
-	if r.reasons.Newsletter && slices.ContainsFunc(msgs, func(m gmail.MessageFull) bool { return slices.Contains(m.LabelIDs, labelUnread) }) {
+	if r.reasons.Newsletter && slices.ContainsFunc(msgs, func(m gmail.MessageFull) bool { return slices.Contains(m.LabelIDs, aiinput.LabelUnread) }) {
 		reasons = append(reasons, dto.InboxZeroReasonNewsletter)
 	}
 	return reasons
@@ -295,9 +269,14 @@ func (r *inboxZeroRun) aiEligible(msgs []gmail.MessageFull) []string {
 // classify は latest を AI に判定させる。eligible のどれかを高い確率で選んだときだけ、その理由を ok=true で返す。
 // 選ばれた選択肢が対象外（オフの理由・other・未読でないニュースレター）なら、2 番目の候補には落とさず ok=false。
 func (r *inboxZeroRun) classify(ctx context.Context, latest gmail.MessageFull, eligible []string) (reason string, ok bool, err error) {
-	callCtx, stop := context.WithTimeout(ctx, r.s.timeout)
+	callCtx, stop := context.WithTimeout(ctx, r.s.timeoutFor(r.provider))
 	defer stop()
-	ans, err := r.classifier.Classify(callCtx, ai.ClassifyInput{State: classifyState(latest), Instructions: classifyInstructions, Criteria: classifyCriteria})
+	cl, release, err := r.classifierFor(callCtx)
+	if err != nil {
+		return "", false, err
+	}
+	defer release()
+	ans, err := cl.Classify(callCtx, ai.ClassifyInput{State: aiinput.ClassifyState(latest), Instructions: aiinput.Instructions, Criteria: aiinput.Criteria})
 	if err != nil {
 		return "", false, err
 	}

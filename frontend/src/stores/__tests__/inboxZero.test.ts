@@ -111,7 +111,11 @@ describe('Inbox Zero: 同意（初回）', () => {
     aiCtl.find = { candidates: [cand(1)], examined: 3, skipped: 0 }
     await zero.start()
     expect(zero.phase).toBe('consent')
-    expect(zero.consentTarget).toEqual({ provider: 'openai', baseUrl: 'https://llm.example/v1' })
+    expect(zero.consentTarget).toEqual({
+      provider: 'openai',
+      baseUrl: 'https://llm.example/v1',
+      loopback: true,
+    })
     await zero.agree()
     expect(callsOf('RecordAIConsent')[0].args).toEqual(['openai', 'https://llm.example/v1'])
     expect(zero.phase).toBe('review')

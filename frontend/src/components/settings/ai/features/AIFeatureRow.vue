@@ -139,24 +139,29 @@ function saveManual(provider: string): void {
           @update:model-value="(e) => save(saved.provider, saved.model, e)"
         />
         <p v-if="choices.loading" class="note" role="status">{{ t.loading }}</p>
-        <form
-          v-for="m in choices.manual"
-          :key="m.provider"
-          class="manual"
-          :data-testid="`ai-feature-manual-${feature}-${m.provider}`"
-          @submit.prevent="saveManual(m.provider)"
-        >
-          <SettingsInput
-            mono
-            :model-value="manualValue(m.provider)"
-            :label="t.manualLabel(msg.ai.providerList.names[m.provider] ?? m.provider)"
-            :placeholder="msg.ai.modelPlaceholder"
-            :hint="m.message ?? msg.ai.modelsManualHint"
-            @update:model-value="(v) => (typed[m.provider] = v)"
-            @enter="saveManual(m.provider)"
-          />
-          <BaseButton variant="secondary" size="sm" type="submit" :loading="busy">{{ t.manualSave }}</BaseButton>
-        </form>
+        <template v-for="m in choices.manual" :key="m.provider">
+          <!-- ローカルAI（managed）が未導入のとき: 手入力ではなく、つなぎ先での導入を案内する（#458）。 -->
+          <p v-if="m.reason === 'not_installed'" class="note" role="status" :data-testid="`ai-feature-not-installed-${feature}`">
+            {{ m.message ?? msg.ai.local.notInstalledNote }}
+          </p>
+          <form
+            v-else
+            class="manual"
+            :data-testid="`ai-feature-manual-${feature}-${m.provider}`"
+            @submit.prevent="saveManual(m.provider)"
+          >
+            <SettingsInput
+              mono
+              :model-value="manualValue(m.provider)"
+              :label="t.manualLabel(msg.ai.providerList.names[m.provider] ?? m.provider)"
+              :placeholder="msg.ai.modelPlaceholder"
+              :hint="m.message ?? msg.ai.modelsManualHint"
+              @update:model-value="(v) => (typed[m.provider] = v)"
+              @enter="saveManual(m.provider)"
+            />
+            <BaseButton variant="secondary" size="sm" type="submit" :loading="busy">{{ t.manualSave }}</BaseButton>
+          </form>
+        </template>
         <p v-if="error" class="error" role="alert">{{ error }}</p>
       </template>
     </div>

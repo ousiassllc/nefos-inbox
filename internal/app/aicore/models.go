@@ -3,11 +3,10 @@ package aicore
 import (
 	"context"
 	"errors"
-	"net"
 	"strings"
 	"time"
 
-	"github.com/ousiassllc/nefos-inbox/internal/ai"
+	"github.com/ousiassllc/nefos-inbox/internal/app/aicore/aiinput"
 	"github.com/ousiassllc/nefos-inbox/internal/app/apperr"
 	"github.com/ousiassllc/nefos-inbox/internal/app/dto"
 )
@@ -17,7 +16,8 @@ const aiModelsTimeout = 20 * time.Second
 
 // ListAIModels は provider のモデル一覧を、渡された送信先（openai は baseURL。空は既定）から取得する（#76・#105）。
 // 保存済みの設定には依らないので、設定を保存する前でも、選んだプロバイダ（と Base URL）の一覧を取得できる。
-// baseURL は openai のみ有効（それ以外のプロバイダでは無視する）。
+// baseURL は openai と local のみ有効（それ以外のプロバイダでは無視する）。local は空が managed（アプリが用意する Ollama。未導入は reason not_installed で通信しない）で、
+// 指定すれば external（localhost 以外は同意が要る）。実装は listLocalModels。
 // キーは資格情報ストアから読み、呼び出し元（フロント）には渡さない。呼ぶのは、プロバイダ・Base URL を選んだとき、API キーの登録・変更後、
 // ChatGPT のログイン後、利用者が「更新」を押したときだけで、定期的には呼ばない（呼び出し側の責務）。
 //
@@ -30,11 +30,14 @@ func (s *Service) ListAIModels(ctx context.Context, provider, baseURL string) (d
 		return dto.AIModelList{}, errBadProvider()
 	}
 	baseURL = strings.TrimSpace(baseURL)
+	if provider == providerLocal {
+		return s.listLocalModels(ctx, baseURL)
+	}
 	if provider != providerOpenAI {
 		baseURL = ""
 	}
 	if baseURL != "" {
-		if err := validateBaseURL(baseURL); err != nil {
+		if err := aiinput.ValidateBaseURL(baseURL); err != nil {
 			return s.noModels(provider, dto.AIModelsInvalidBaseURL, "Base URL が使えないため、モデル一覧を取得できません。モデル名を入力してください。"), nil
 		}
 	}
@@ -52,7 +55,7 @@ func (s *Service) ListAIModels(ctx context.Context, provider, baseURL string) (d
 			return s.noModels(provider, dto.AIModelsNoCredentials, noCredentialsMessage(provider)), nil
 		}
 		if errors.As(err, &ae) && ae.Code == apperr.Offline {
-			reason, msg := modelsFailure(err)
+			reason, msg := aiinput.ModelsFailure(err)
 			return s.noModels(provider, reason, msg), nil
 		}
 		return dto.AIModelList{}, err
@@ -63,12 +66,17 @@ func (s *Service) ListAIModels(ctx context.Context, provider, baseURL string) (d
 
 	lctx, cancel := context.WithTimeout(ctx, aiModelsTimeout)
 	defer cancel()
+	return s.fetchModels(lctx, ctx, provider, baseURL, cred)
+}
+
+// fetchModels は provider のモデル一覧を取得する（lctx は期限つき、ctx は呼び出し元。ctx の終了は CANCELLED）。取得できないときは Reason つきの空の一覧。
+func (s *Service) fetchModels(lctx, ctx context.Context, provider, baseURL, cred string) (dto.AIModelList, error) {
 	list, err := s.d.AIModels(lctx, provider, baseURL, cred)
 	if err != nil {
 		if ctx.Err() != nil {
 			return dto.AIModelList{}, apperr.Wrap(apperr.Cancelled, "モデル一覧の取得を中止しました。", err)
 		}
-		reason, msg := modelsFailure(err)
+		reason, msg := aiinput.ModelsFailure(err)
 		s.d.Logger.Warn("ai models list failed", "provider", provider, "reason", reason)
 		return dto.AIModelList{Provider: provider, Models: []dto.AIModel{}, Reason: reason, Message: msg}, nil
 	}
@@ -89,22 +97,4 @@ func noCredentialsMessage(provider string) string {
 		return "ChatGPT にログインすると、使えるモデルを取得できます。モデル名を入力することもできます。"
 	}
 	return "API キーを登録すると、使えるモデルを取得できます。モデル名を入力することもできます。"
-}
-
-// modelsFailure は一覧の取得エラーを理由コードと短い表示にする。メッセージにキー・応答本文・URL は含めない。
-func modelsFailure(err error) (reason, msg string) {
-	var netErr net.Error
-	switch {
-	case errors.Is(err, ai.ErrInvalidBaseURL):
-		return dto.AIModelsInvalidBaseURL, "Base URL が使えないため、モデル一覧を取得できません。モデル名を入力してください。"
-	case errors.Is(err, ai.ErrModelsUnsupported):
-		return dto.AIModelsUnsupported, "このサービスにはモデル一覧の取得機能がないようです。モデル名を入力してください。"
-	case errors.Is(err, ai.ErrUnauthorized):
-		return dto.AIModelsUnauthorized, "認証または権限がないため、モデル一覧を取得できません。キー（またはログイン）を確認するか、モデル名を入力してください。"
-	case errors.Is(err, ai.ErrRateLimited):
-		return dto.AIModelsRateLimited, "利用制限のため、モデル一覧を取得できません。しばらくしてから更新するか、モデル名を入力してください。"
-	case errors.Is(err, context.DeadlineExceeded), errors.As(err, &netErr):
-		return dto.AIModelsNetwork, "通信できないため、モデル一覧を取得できません。モデル名を入力してください。"
-	}
-	return dto.AIModelsFailed, "モデル一覧を取得できませんでした。モデル名を入力してください。"
 }

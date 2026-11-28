@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { parseBindingError } from '../../../../lib/api'
 import { settings as msg } from '../../../../lib/messages'
+import { useLocalAiStore } from '../../../../stores/localAi'
+import { usePlatformStore } from '../../../../stores/platform'
 import { useSettingsStore } from '../../../../stores/settings'
 import { useUiStore } from '../../../../stores/ui'
 import ConfirmDialog from '../../../ui/ConfirmDialog.vue'
@@ -12,8 +14,18 @@ import { AI_PROVIDERS, type AIProviderId } from './aiProviders'
 // つなぐ・設定は、そのプロバイダのページ（親が開く）。接続を外すのは、確認のうえこの一覧でその場で行う。
 const emit = defineEmits<{ connect: [id: AIProviderId]; open: [id: AIProviderId] }>()
 const store = useSettingsStore()
+const platform = usePlatformStore()
 const ui = useUiStore()
+const local = useLocalAiStore()
 const t = msg.ai.connect
+
+// ローカルAI（Ollama。#458）は、この OS が対応している（Windows）ときだけ一覧に出す。
+const providers = computed(() => AI_PROVIDERS.filter((p) => p.id !== 'local' || platform.capabilities.supportsLocalAi))
+
+// ローカルAIの導入・取得で変わる「接続済み」を、このタブを開いたときの最新にする。
+onMounted(() => {
+  if (platform.capabilities.supportsLocalAi) void local.refreshConfig()
+})
 
 const target = ref<AIProviderId>()
 const confirmOpen = ref(false)
@@ -59,7 +71,7 @@ async function disconnect(): Promise<void> {
     </div>
     <ul class="box" :aria-label="t.listLabel" data-testid="ai-provider-list">
       <AIProviderRow
-        v-for="p in AI_PROVIDERS"
+        v-for="p in providers"
         :key="p.id"
         :id="p.id"
         :busy="busy"

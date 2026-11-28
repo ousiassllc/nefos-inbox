@@ -10,6 +10,8 @@ const (
 	UpdateAvailable  = "update:available"
 	// UpdateStatus は自動アップデートの進み（ダウンロード中・入れ替え待ち・失敗・なし）が変わったとき（ペイロード UpdateStatusPayload）。
 	UpdateStatus = "update:status"
+	// LocalAIStatus はローカル AI（Ollama）の導入・取得・起動の状態が変わったとき（ペイロード dto.LocalAIStatus。進捗は 250ms に 1 回まで。#458）。
+	LocalAIStatus = "localai:status"
 	// BeforeQuit はトレイの「終了」で発行する。フロントは未保存の下書きを保存して AppService.AckBeforeQuit を呼ぶ。
 	BeforeQuit = "app:before-quit"
 	// FilesDropped はウィンドウへのファイルドロップ（ペイロード {files: string[]}）。ドロップ先は data-file-drop-target 属性の要素のみ。

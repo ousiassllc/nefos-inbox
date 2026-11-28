@@ -67,6 +67,8 @@ export const thread = {
       '「要約・質問」に選んだ AI がつながっていません。設定の「AI のつなぎ先」で API キーを登録してください',
     needLogin:
       '「要約・質問」に選んだ ChatGPT にログインしていません。設定の「AI のつなぎ先」でログインしてください',
+    needLocal:
+      '「要約・質問」に選んだローカルAI（Ollama）が使える状態ではありません。設定の「AI のつなぎ先」で導入してください',
     openSettings: 'AI のつなぎ先を開く',
     failed: 'AI の処理に失敗しました',
     questionHeading: 'あなたの質問',

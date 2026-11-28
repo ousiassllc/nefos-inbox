@@ -31,10 +31,15 @@ func TestBindingServicesFollowCapability(t *testing.T) {
 
 	desktop := instances(capability.Desktop("windows"))
 	assert.Contains(t, desktop, any(svc.MCP))
+	assert.Contains(t, desktop, any(svc.LocalAI), "Windows では LocalAIService を登録する")
 	assert.True(t, hasPlatform(desktop))
 
 	android := instances(capability.Android())
 	assert.NotContains(t, android, any(svc.MCP), "Android では MCPService を登録しない")
 	assert.True(t, hasPlatform(android), "PlatformService は全 OS で登録する")
+	assert.NotContains(t, android, any(svc.LocalAI), "Android では LocalAIService を登録しない")
 	assert.Contains(t, android, any(svc.App))
+
+	// ローカルAI（Ollama）は Windows だけ。macOS など Windows 以外のデスクトップでは登録しない。
+	assert.NotContains(t, instances(capability.Desktop("darwin")), any(svc.LocalAI))
 }

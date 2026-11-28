@@ -4,10 +4,13 @@ package aicore
 import (
 	"context"
 	"errors"
+	"slices"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/ousiassllc/nefos-inbox/internal/ai"
+	"github.com/ousiassllc/nefos-inbox/internal/app/aicore/localconn"
 	"github.com/ousiassllc/nefos-inbox/internal/app/apperr"
 	"github.com/ousiassllc/nefos-inbox/internal/app/deps"
 	"github.com/ousiassllc/nefos-inbox/internal/app/dto"
@@ -19,7 +22,8 @@ import (
 const (
 	providerAnthropic = "anthropic"
 	providerOpenAI    = "openai"
-	providerChatGPT   = "chatgpt" // Sign in with ChatGPT（利用者自身の ChatGPT プラン。Responses API）
+	providerChatGPT   = "chatgpt"        // Sign in with ChatGPT（利用者自身の ChatGPT プラン。Responses API）
+	providerLocal     = ai.ProviderLocal // ローカルAI（Ollama。#458。API キーは任意）
 	// providerTypeSafe は TypeSafe AI（Jev。#314）。文章を書かない分類用のモデルで、Inbox Zero の判定だけに使える（モデルは選ばない）。
 	// 「AI で下書き」・要約・質問には使えない（validProvider の外）。API キーと同意（件名・差出人・本文の先頭の送信）は持つ（validSendProvider）。
 	providerTypeSafe = "typesafe"
@@ -44,7 +48,7 @@ type Service struct {
 	d        *deps.Deps
 	sessions SessionLookup
 
-	timeout time.Duration
+	timeout, localTimeout time.Duration // localTimeout はローカルAI（#458）の生成の期限
 
 	cancelTTL time.Duration
 
@@ -61,12 +65,23 @@ type Option func(*Service)
 // WithTimeout はプロバイダ呼び出しのタイムアウトを変える（既定は 60 秒。テストで短縮するのに使う）。
 func WithTimeout(d time.Duration) Option { return func(s *Service) { s.timeout = d } }
 
+// WithLocalTimeout はローカルAIの生成のタイムアウトを変える（既定は 300 秒。テストで短縮するのに使う）。
+func WithLocalTimeout(d time.Duration) Option { return func(s *Service) { s.localTimeout = d } }
+
+// timeoutFor は provider の生成のタイムアウト（ローカルAIは長い）。
+func (s *Service) timeoutFor(provider string) time.Duration {
+	if provider == providerLocal {
+		return s.localTimeout
+	}
+	return s.timeout
+}
+
 // WithCancelRecordTTL は、登録前に届いた中止要求を覚えておく時間を変える（既定は 1 分。テストで短縮するのに使う）。
 func WithCancelRecordTTL(d time.Duration) Option { return func(s *Service) { s.cancelTTL = d } }
 
 // New は Service を作る。返信系セッションの参照に sessions を使う。
 func New(d *deps.Deps, sessions SessionLookup, opts ...Option) *Service {
-	s := &Service{d: d, sessions: sessions, timeout: aiGenerateTimeout, cancelTTL: cancelRecordTTL,
+	s := &Service{d: d, sessions: sessions, timeout: aiGenerateTimeout, localTimeout: localconn.GenerateTimeout, cancelTTL: cancelRecordTTL,
 		inflight: map[string]context.CancelCauseFunc{}, cancelled: map[string]time.Time{}}
 	for _, o := range opts {
 		o(s)
@@ -76,7 +91,7 @@ func New(d *deps.Deps, sessions SessionLookup, opts ...Option) *Service {
 
 // validProvider は文章を書く AI（「AI で下書き」・要約・質問）に使えるプロバイダか（モデル一覧もこの範囲）。
 func validProvider(p string) bool {
-	return p == providerAnthropic || p == providerOpenAI || p == providerChatGPT
+	return p == providerAnthropic || p == providerOpenAI || p == providerChatGPT || p == providerLocal
 }
 
 // validSendProvider はメールの内容の送信先になり得るプロバイダ（API キーの登録・同意の対象）か。validProvider に TypeSafe AI を足したもの。
@@ -105,7 +120,7 @@ func (s *Service) config(ctx context.Context) (dto.AIConfig, error) {
 	if err != nil {
 		return dto.AIConfig{}, err
 	}
-	consented, err := s.loadConsent(ctx, conn.OpenAIBaseURL)
+	consented, err := s.loadConsent(ctx, conn)
 	if err != nil {
 		return dto.AIConfig{}, err
 	}
@@ -114,7 +129,7 @@ func (s *Service) config(ctx context.Context) (dto.AIConfig, error) {
 		return dto.AIConfig{}, err
 	}
 	keyed := []string{}
-	for _, p := range []string{providerAnthropic, providerOpenAI, providerTypeSafe} {
+	for _, p := range []string{providerAnthropic, providerOpenAI, providerTypeSafe, providerLocal} {
 		_, ok, err := s.apiKey(p)
 		if err != nil {
 			return dto.AIConfig{}, err
@@ -123,7 +138,12 @@ func (s *Service) config(ctx context.Context) (dto.AIConfig, error) {
 			keyed = append(keyed, p)
 		}
 	}
+	local := conn.local()
+	if localconn.Usable(s.d.Capabilities, s.d.LocalAI, local) && local.Loopback() && !slices.Contains(consented, providerLocal) {
+		consented = append(consented, providerLocal) // 送信先が PC の外へ出ないので同意は要らない
+	}
 	return dto.AIConfig{
+		Local:   localconn.Config(s.d.Capabilities, s.d.LocalAI, local),
 		BaseURL: conn.OpenAIBaseURL, Features: features.dto(),
 		APIKeyProviders: keyed, ConsentedProviders: consented,
 		ChatGPTSignedIn: gpt.SignedIn, ChatGPTEmail: gpt.Email, ChatGPTAccounts: chatGPTAccounts(gpt),
@@ -134,7 +154,7 @@ func (s *Service) config(ctx context.Context) (dto.AIConfig, error) {
 func (s *Service) GetAIConfig(ctx context.Context) (dto.AIConfig, error) { return s.config(ctx) }
 
 func errBadProvider() error {
-	return apperr.New(apperr.Validation, "AI プロバイダが正しくありません（anthropic・openai・chatgpt・typesafe のいずれか）。")
+	return apperr.New(apperr.Validation, "AI プロバイダが正しくありません（anthropic・openai・chatgpt・local・typesafe のいずれか）。")
 }
 
 // errChatGPTNoKey は chatgpt に API キー操作が来たときのエラー（ChatGPT ではログインでトークンを得る）。

@@ -2,7 +2,10 @@
 import { MagicWand } from '@iconoir/vue'
 import { computed, onMounted, watch } from 'vue'
 import { parseBindingError } from '../../../../lib/api'
+import { providerBaseUrl } from '../../../../lib/localAi/baseUrl'
 import { settings as msg } from '../../../../lib/messages'
+import { useLocalAiStore } from '../../../../stores/localAi'
+import { usePlatformStore } from '../../../../stores/platform'
 import { useSettingsStore } from '../../../../stores/settings'
 import { useUiStore } from '../../../../stores/ui'
 import BaseButton from '../../../ui/BaseButton.vue'
@@ -18,6 +21,8 @@ import InboxZeroReasons from './InboxZeroReasons.vue'
 // 一覧の下に、Inbox Zero で不要とみなす理由のオン・オフ（#377）。AI を使わない理由は返信済みだけなので、それだけなら AI をつながなくても使える。
 const store = useSettingsStore()
 const ui = useUiStore()
+const platform = usePlatformStore()
+const local = useLocalAiStore()
 const t = msg.ai.use
 
 const cfg = computed(() => store.aiConfig)
@@ -38,7 +43,7 @@ async function loadModels(): Promise<void> {
   await Promise.all(
     connectedModelProviders.value.map(async (p) => {
       try {
-        await store.loadAIModels(p, p === 'openai' ? (c.baseUrl ?? '') : '')
+        await store.loadAIModels(p, providerBaseUrl(p, c))
       } catch (e) {
         store.aiModels = {
           ...store.aiModels,
@@ -48,10 +53,15 @@ async function loadModels(): Promise<void> {
     }),
   )
 }
-// つないであるプロバイダ（と OpenAI 互換の Base URL）が変わったら取り直す。
-watch(() => [connectedModelProviders.value.join(','), cfg.value?.baseUrl], () => void loadModels(), { immediate: true })
+// つないであるプロバイダ（と OpenAI 互換・ローカルAI（external）の Base URL・ローカルAIのつなぎ方）が変わったら取り直す。
+watch(
+  () => [connectedModelProviders.value.join(','), cfg.value?.baseUrl, cfg.value?.local?.mode, cfg.value?.local?.baseUrl],
+  () => void loadModels(),
+  { immediate: true },
+)
 onMounted(() => {
   if (cfg.value === undefined) void store.load()
+  else if (platform.capabilities.supportsLocalAi) void local.refreshConfig() // ローカルAIの「接続済み」を最新にする
 })
 
 function goConnect(): void {

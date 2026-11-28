@@ -21,13 +21,13 @@ export interface AIConfig {
     "features": AIFeatures;
 
     /**
-     * APIKeyProviders は API キーを登録済みのプロバイダ（anthropic／openai／typesafe。chatgpt は ChatGPTSignedIn）。null にしない。
+     * APIKeyProviders は API キーを登録済みのプロバイダ（anthropic／openai／typesafe／local（任意のキー）。chatgpt は ChatGPTSignedIn）。null にしない。
      */
     "apiKeyProviders": string[] | null;
 
     /**
-     * ConsentedProviders は送信先への同意済みのプロバイダ（anthropic／openai／chatgpt／typesafe）。
-     * openai は現在の Base URL の送信先への同意だけが有効。null にしない。
+     * ConsentedProviders は送信先への同意済みのプロバイダ（anthropic／openai／chatgpt／typesafe／local）。
+     * openai・local は現在の Base URL の送信先への同意だけが有効。local は送信先が loopback（managed、または localhost などの external）なら同意なしで含める。null にしない。
      */
     "consentedProviders": string[] | null;
 
@@ -41,6 +41,11 @@ export interface AIConfig {
      * ChatGPTAccounts は保存済みの ChatGPT アカウント（登録順。トークンは含まない）。
      */
     "chatgptAccounts": ChatGPTAccount[] | null;
+
+    /**
+     * Local はローカルAI（Ollama。#458）のつなぎ方。capability が無い OS でも返す（Ready は false）。
+     */
+    "local": AILocalConnection;
 }
 
 /**
@@ -49,7 +54,7 @@ export interface AIConfig {
  */
 export interface AIFeatureSetting {
     /**
-     * Provider は選んだプロバイダ（anthropic／openai／chatgpt。Inbox Zero は typesafe も）。空は未選択。
+     * Provider は選んだプロバイダ（anthropic／openai／chatgpt／local。Inbox Zero は typesafe も）。空は未選択。
      */
     "provider": string;
 
@@ -72,6 +77,32 @@ export interface AIFeatures {
     "draft": AIFeatureSetting;
     "threadAi": AIFeatureSetting;
     "inboxZero": AIFeatureSetting;
+}
+
+/**
+ * AILocalConnection はローカルAI（Ollama。provider "local"）のつなぎ方（#458）。capability が無い OS でも返す（Ready は false）。
+ */
+export interface AILocalConnection {
+    /**
+     * Mode は "managed"（既定。アプリが用意する Ollama）／"external"（すでに動いている Ollama・LM Studio など）。
+     */
+    "mode": string;
+
+    /**
+     * BaseURL は external のときの Base URL。managed は空。
+     */
+    "baseUrl": string;
+
+    /**
+     * Ready はローカルAIを選べる状態か。managed は導入済みでモデルが 1 つ以上取得済み、external は Base URL が有効。
+     */
+    "ready": boolean;
+
+    /**
+     * Loopback は送信先が PC の外へ出ないか（managed、または BaseURL の host が localhost／127.0.0.1／::1 の external）。
+     * 同意の要否（loopback 以外は同意が要る）の判定と同じ関数で求める。画面はこの値で同意の欄を出す。
+     */
+    "loopback": boolean;
 }
 
 /**
@@ -455,6 +486,68 @@ export interface Label {
     "name": string;
     "colorBg"?: string;
     "colorFg"?: string;
+}
+
+/**
+ * LocalAIJob は実行中のジョブ（同時に 1 つ）。
+ */
+export interface LocalAIJob {
+    "kind": string;
+    "model"?: string;
+    "stage": string;
+    "completedBytes": number;
+    "totalBytes": number;
+}
+
+/**
+ * LocalAIModel は取得できるモデル 1 つと、取得済みか。
+ */
+export interface LocalAIModel {
+    "name": string;
+    "displayName": string;
+    "description": string;
+    "license": string;
+    "sizeBytes": number;
+    "installed": boolean;
+}
+
+/**
+ * LocalAIStatus はアプリが用意するローカルAI（Ollama）の状態（LocalAIService・イベント localai:status。#458）。
+ */
+export interface LocalAIStatus {
+    "supported": boolean;
+
+    /**
+     * UnsupportedReason は使えない理由（日本語 1 文）。使えるときは省略。
+     */
+    "unsupportedReason"?: string;
+    "installed": boolean;
+    "running": boolean;
+
+    /**
+     * Version は固定した Ollama の版（v0.40.17 など）。
+     */
+    "version": string;
+
+    /**
+     * DownloadBytes は導入でダウンロードする量（バイト）。
+     */
+    "downloadBytes": number;
+
+    /**
+     * Job は実行中の導入・モデル取得。無ければ省略。
+     */
+    "job"?: LocalAIJob | null;
+
+    /**
+     * Models は取得できるモデル（カタログ順）。null にしない。
+     */
+    "models": LocalAIModel[] | null;
+
+    /**
+     * LastError は直前に失敗したジョブの理由（日本語。次のジョブを始めると消える）。
+     */
+    "lastError"?: string;
 }
 
 /**

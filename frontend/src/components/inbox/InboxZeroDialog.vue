@@ -4,6 +4,7 @@ import { keyOf } from '../../lib/inboxItems'
 import { common, inboxZero as msg } from '../../lib/messages'
 import { useInboxZeroStore } from '../../stores/inboxZero'
 import { aiDestination } from '../settings/ai/aiDestination'
+import LocalAiWaitNote from '../settings/ai/local/LocalAiWaitNote.vue'
 import BaseButton from '../ui/BaseButton.vue'
 import BaseCheckbox from '../ui/BaseCheckbox.vue'
 import BaseDialog from '../ui/BaseDialog.vue'
@@ -25,7 +26,7 @@ const count = computed(() => zero.checkedCandidates.length)
 /** 同意を求める送信先（選んだ AI。同意の画面は未選択では開かない）。 */
 const dest = computed(() => {
   const t = zero.consentTarget
-  return t ? aiDestination(t.provider, t.baseUrl) : undefined
+  return t ? aiDestination(t.provider, t.baseUrl, t.loopback) : undefined
 })
 
 function onConsentOpen(open: boolean): void {
@@ -63,7 +64,7 @@ function onReviewOpen(open: boolean): void {
     :body-label="t.checkingTitle"
     @update:open="onCheckingOpen"
   >
-    <p class="checking" data-testid="inbox-zero-checking"><Spinner /> {{ t.checking }}</p>
+    <p class="checking" data-testid="inbox-zero-checking"><Spinner /> {{ t.checking }} <LocalAiWaitNote :provider="zero.needsAI ? zero.selectedAI : undefined" /></p>
     <template #footer>
       <BaseButton data-testid="inbox-zero-checking-cancel" @click="zero.cancel()">{{ t.abort }}</BaseButton>
     </template>
@@ -117,6 +118,7 @@ function onReviewOpen(open: boolean): void {
 
 .checking {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--s-3);
   margin: 0;

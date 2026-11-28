@@ -33,6 +33,7 @@ function setup(opts: { items?: number; keyed?: boolean; selected?: string } = {}
     consentedProviders: providers,
     chatgptSignedIn: false,
     chatgptAccounts: [],
+    local: { mode: 'managed', baseUrl: '', ready: false, loopback: true },
   }
   return { pinia, zero: useInboxZeroStore() }
 }

@@ -22,6 +22,7 @@ function mountButton(cfg: Partial<AIConfig>) {
     consentedProviders: [],
     chatgptSignedIn: false,
     chatgptAccounts: [],
+    local: { mode: 'managed', baseUrl: '', ready: false, loopback: true },
     ...cfg,
   }
   const calls: string[] = []

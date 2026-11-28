@@ -17,6 +17,7 @@ export const base: AIConfig = {
   consentedProviders: ['openai'],
   chatgptSignedIn: false,
   chatgptAccounts: [],
+  local: { mode: 'managed', baseUrl: '', ready: false, loopback: true },
 }
 
 /** 取得の結果を決める関数（provider・OpenAI 互換の baseUrl を受ける）。既定は、空の一覧（理由なし）。 */
